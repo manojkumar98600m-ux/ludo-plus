@@ -6,6 +6,7 @@ import ChatView from "../ChatView";
 import ReelsView from "../ReelsView";
 import MembershipModal from "../MembershipModal";
 import "./style.css";
+import "./ludo.css";
 
 type Tab = "game" | "dating" | "reels" | "chat";
 
