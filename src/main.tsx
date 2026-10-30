@@ -4,11 +4,12 @@ import LudoBoard from "../LudoBoard";
 import DatingView from "../DatingView";
 import ChatView from "../ChatView";
 import ReelsView from "../ReelsView";
+import PostsView from "../PostsView";
 import MembershipModal from "../MembershipModal";
 import "./style.css";
 import "./ludo.css";
 
-type Tab = "game" | "dating" | "reels" | "chat";
+type Tab = "game" | "dating" | "reels" | "chat" | "posts";
 
 function App() {
   const [tab, setTab] = useState<Tab>("game");
@@ -17,7 +18,8 @@ function App() {
     { id: "game", label: "Game", icon: "🎲" },
     { id: "dating", label: "Dating", icon: "💜" },
     { id: "reels", label: "Reels", icon: "🎬" },
-    { id: "chat", label: "Chat", icon: "💬" }
+    { id: "chat", label: "Chat", icon: "💬" },
+    { id: "posts", label: "Posts", icon: "📸" }
   ];
   return (
     <div className="app">
@@ -41,6 +43,7 @@ function App() {
         {tab === "dating" && <DatingView />}
         {tab === "reels" && <ReelsView />}
         {tab === "chat" && <ChatView />}
+        {tab === "posts" && <PostsView />}
         <section className="membership">
           <div><span className="eyebrow">LUDO PLUS PREMIUM</span><h2>90 days membership</h2><p>₹50 total · PhonePe merchant setup pending. Payment is disabled until real gateway verification is implemented.</p><button className="secondary-btn" onClick={() => setMembershipOpen(true)}>View membership</button></div>
           <span className="crown">👑</span>
