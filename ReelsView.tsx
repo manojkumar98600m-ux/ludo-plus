@@ -58,7 +58,7 @@ export default function ReelsView() {
       <label className="muted small">Your name</label>
       <input value={name} onChange={e=>setName(e.target.value)} maxLength={24} placeholder="Display name" />
       <label className="muted small">Phone से video चुनें (MP4, WebM, MOV; max 8 MB)</label>
-      <input id="ludo-reel-file" type="file" accept="video/mp4,video/webm,video/quicktime" onChange={e=>{const file=e.target.files?.[0]||null;if(file&&file.size>8*1024*1024){setError("Video 8 MB या उससे छोटी होनी चाहिए।");e.currentTarget.value="";setVideoFile(null);return;}setError("");setVideoFile(file);if(file)setVideoUrl("");}} />
+      <input id="ludo-reel-file" type="file" accept="video/mp4,video/webm,video/quicktime" onChange={e=>{const file=e.target.files?.[0]||null;if(file&&file.size>100*1024*1024){setError("Video 100 MB या उससे छोटी होनी चाहिए।");e.currentTarget.value="";setVideoFile(null);return;}setError("");setVideoFile(file);if(file)setVideoUrl("");}} />
       <label className="muted small">या direct video URL (HTTPS)</label>
       <input value={videoUrl} onChange={e=>{setVideoUrl(e.target.value);if(e.target.value)setVideoFile(null);}} placeholder="https://example.com/video.mp4" inputMode="url" />
       <input value={caption} onChange={e=>setCaption(e.target.value)} maxLength={300} placeholder="Write a caption..." />
