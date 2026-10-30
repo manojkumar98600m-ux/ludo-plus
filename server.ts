@@ -49,7 +49,8 @@ app.post("/api/ludo/rooms", (req, res) => {
   const code = makeRoomCode();
   const room: Room = {
     code, hostId: playerId, status: "waiting", createdAt: Date.now(),
-    players: [{ playerId, displayName, color: COLORS[0], joinedAt: Date.now() }]
+    players: [{ playerId, displayName, color: COLORS[0], joinedAt: Date.now() }],
+    game: { positions: Array.from({ length: 4 }, () => [-1, -1, -1, -1]), turn: 0, dice: null, winner: null, revision: 0, updatedAt: Date.now() }
   };
   rooms.set(code, room);
   return res.status(201).json({ room: publicRoom(room), host: true });
