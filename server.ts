@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 const app = express();
 const port = Number(process.env.PORT || 3000);
 app.use(cors());
-app.use(express.json({ limit: "12mb" }));
+app.use(express.json({ limit: "140mb" }));
 
 type RoomPlayer = { playerId: string; displayName: string; color: string; joinedAt: number };
 type GameSnapshot = { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number; updatedAt: number };
@@ -147,7 +147,7 @@ app.post("/api/uploads/video", async (req, res) => {
   const match = dataUrl.match(/^data:video\/(?:mp4|webm|quicktime);base64,([A-Za-z0-9+/=]+)$/);
   if (!match) return res.status(400).json({ error: "Video data is invalid." });
   const bytes = Buffer.from(match[1], "base64");
-  if (!bytes.length || bytes.length > 8 * 1024 * 1024) return res.status(413).json({ error: "Video must be 8 MB or smaller." });
+  if (!bytes.length || bytes.length > 100 * 1024 * 1024) return res.status(413).json({ error: "Video must be 100 MB or smaller." });
   const path = `reels/${Date.now()}-${randomBytes(8).toString("hex")}.${extensions[contentType]}`;
   try {
     const response = await fetch(`${supabaseUrl}/storage/v1/object/ludo-media/${path}`, {
