@@ -35,9 +35,13 @@ export type ChatMessage = { id: string; playerId: string; displayName: string; t
 
 export type FeedComment = { id: string; playerId: string; displayName: string; text: string; createdAt: number };
 export type FeedPost = { id: string; playerId: string; displayName: string; caption: string; imageUrl: string; createdAt: number; likes: string[]; comments: FeedComment[] };
+export type Reel = { id: string; playerId: string; displayName: string; caption: string; videoUrl: string; createdAt: number; likes: string[] };
 
 export const api = {
   uploadImage: (dataUrl: string, contentType: string) => request<{ imageUrl: string }>("/api/uploads/image", { method: "POST", body: JSON.stringify({ dataUrl, contentType }) }),
+  getReels: () => request<{ reels: Reel[] }>("/api/reels"),
+  createReel: (displayName: string, caption: string, videoUrl: string) => request<{ reel: Reel }>("/api/reels", { method: "POST", body: JSON.stringify({ displayName, caption, videoUrl, playerId: getPlayerId() }) }),
+  toggleReelLike: (reelId: string) => request<{ reel: Reel }>(`/api/reels/${encodeURIComponent(reelId)}/like`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
   getPosts: () => request<{ posts: FeedPost[] }>("/api/posts"),
   createPost: (displayName: string, caption: string, imageUrl: string) => request<{ post: FeedPost }>("/api/posts", { method: "POST", body: JSON.stringify({ displayName, caption, imageUrl, playerId: getPlayerId() }) }),
   togglePostLike: (postId: string) => request<{ post: FeedPost }>(`/api/posts/${encodeURIComponent(postId)}/like`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
