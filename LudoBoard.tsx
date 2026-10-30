@@ -184,7 +184,8 @@ export default function LudoBoard() {
         const tokens = positions[finishedPlayer].map((pos, ti) => pos === 57 ? players[finishedPlayer].css + (ti + 1) : "").filter(Boolean);
         return { cls: `finish-cell finish-${players[finishedPlayer].css}`, label: "", tokens };
       }
-      return { cls: "finish-cell", label: (r === 7 && c === 7) ? "✦" : "", tokens: [] as string[] };
+      const centerClass = r === 6 && c === 7 ? "center-north" : r === 7 && c === 8 ? "center-east" : r === 8 && c === 7 ? "center-south" : r === 7 && c === 6 ? "center-west" : "";
+      return { cls: `finish-cell ${centerClass}`, label: (r === 7 && c === 7) ? "dice-hub" : "", tokens: [] as string[] };
     }
     return { cls: "empty-cell", label: "", tokens: [] as string[] };
   }
@@ -195,7 +196,7 @@ export default function LudoBoard() {
       {Array.from({ length: 15 }, (_, r) => Array.from({ length: 15 }, (_, c) => {
         const cell = cellContent(r, c);
         return <div key={`${r}-${c}`} className={`ludo-cell ${cell.cls}`} title={cell.label}>
-          {cell.tokens.length > 0 ? <span className="board-pieces">{cell.tokens.map((token, i) => {
+          {cell.label === "dice-hub" ? <span className="center-dice"><i>⚄</i><i>⚃</i></span> : cell.tokens.length > 0 ? <span className="board-pieces">{cell.tokens.map((token, i) => {
             const playerIndex = players.findIndex(player => token.startsWith(player.css));
             const tokenIndex = Number(token.slice(-1)) - 1;
             const canSelect = playerIndex === turn && dice !== null && winner === null;
