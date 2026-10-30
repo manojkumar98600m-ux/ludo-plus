@@ -8,7 +8,8 @@ app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
 type RoomPlayer = { playerId: string; displayName: string; color: string; joinedAt: number };
-type Room = { code: string; hostId: string; status: "waiting" | "playing"; players: RoomPlayer[]; createdAt: number };
+type GameSnapshot = { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number; updatedAt: number };
+type Room = { code: string; hostId: string; status: "waiting" | "playing"; players: RoomPlayer[]; createdAt: number; game: GameSnapshot };
 const rooms = new Map<string, Room>();
 const COLORS = ["red", "green", "yellow", "blue"];
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
@@ -23,7 +24,7 @@ function makeRoomCode() {
   return code;
 }
 function publicRoom(room: Room) {
-  return { code: room.code, status: room.status, players: room.players, maxPlayers: 4, createdAt: room.createdAt };
+  return { code: room.code, status: room.status, players: room.players, maxPlayers: 4, createdAt: room.createdAt, game: room.game };
 }
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok", app: "LUDO PLUS" }));
@@ -73,6 +74,31 @@ app.get("/api/ludo/rooms/:roomCode", (req, res) => {
   cleanExpiredRooms();
   const room = rooms.get(String(req.params.roomCode || "").trim().toUpperCase());
   if (!room) return res.status(404).json({ error: "Room not found or server restarted." });
+  return res.json({ room: publicRoom(room) });
+});
+
+app.put("/api/ludo/rooms/:roomCode/state", (req, res) => {
+  cleanExpiredRooms();
+  const room = rooms.get(String(req.params.roomCode || "").trim().toUpperCase());
+  if (!room) return res.status(404).json({ error: "Room not found or server restarted." });
+  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";
+  if (!room.players.some(player => player.playerId === playerId)) return res.status(403).json({ error: "You are not a member of this room." });
+  const positions = req.body?.positions;
+  const turn = req.body?.turn;
+  const dice = req.body?.dice;
+  const winner = req.body?.winner;
+  if (!Array.isArray(positions) || positions.length !== 4 || positions.some((row: unknown) => !Array.isArray(row) || row.length !== 4 || row.some((value: unknown) => !Number.isInteger(value) || (value as number) < -1 || (value as number) > 57))) {
+    return res.status(400).json({ error: "Invalid token positions." });
+  }
+  if (!Number.isInteger(turn) || turn < 0 || turn > 3 || !(dice === null || (Number.isInteger(dice) && dice >= 1 && dice <= 6)) || !(winner === null || (Number.isInteger(winner) && winner >= 0 && winner <= 3))) {
+    return res.status(400).json({ error: "Invalid game turn, dice or winner." });
+  }
+  const expectedRevision = Number(req.body?.revision);
+  if (Number.isInteger(expectedRevision) && expectedRevision !== room.game.revision) {
+    return res.status(409).json({ error: "Game state changed. Refresh the room and try again.", room: publicRoom(room) });
+  }
+  room.game = { positions, turn, dice, winner, revision: room.game.revision + 1, updatedAt: Date.now() };
+  room.status = "playing";
   return res.json({ room: publicRoom(room) });
 });
 
