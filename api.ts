@@ -39,6 +39,7 @@ export type Reel = { id: string; playerId: string; displayName: string; caption:
 
 export const api = {
   uploadImage: (dataUrl: string, contentType: string) => request<{ imageUrl: string }>("/api/uploads/image", { method: "POST", body: JSON.stringify({ dataUrl, contentType }) }),
+  uploadVideo: (dataUrl: string, contentType: string) => request<{ videoUrl: string }>("/api/uploads/video", { method: "POST", body: JSON.stringify({ dataUrl, contentType }) }),
   getReels: () => request<{ reels: Reel[] }>("/api/reels"),
   createReel: (displayName: string, caption: string, videoUrl: string) => request<{ reel: Reel }>("/api/reels", { method: "POST", body: JSON.stringify({ displayName, caption, videoUrl, playerId: getPlayerId() }) }),
   toggleReelLike: (reelId: string) => request<{ reel: Reel }>(`/api/reels/${encodeURIComponent(reelId)}/like`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
