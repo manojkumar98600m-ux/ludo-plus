@@ -113,6 +113,8 @@ app.put("/api/ludo/rooms/:roomCode/state", async (req, res) => {
     if (!room) return res.status(404).json({ error: "Room not found." });
     const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";
     if (!room.players.some(p => p.playerId === playerId)) return res.status(403).json({ error: "You are not a member of this room." });
+    const activePlayer = room.players[room.game.turn];
+    if (!activePlayer || activePlayer.playerId !== playerId) return res.status(403).json({ error: "It is not your turn." });
     const positions = req.body?.positions, turn = req.body?.turn, dice = req.body?.dice, winner = req.body?.winner;
     if (!Array.isArray(positions) || positions.length !== 4 || positions.some((row: unknown) => !Array.isArray(row) || row.length !== 4 || row.some((v: unknown) => !Number.isInteger(v) || (v as number) < -1 || (v as number) > 57))) return res.status(400).json({ error: "Invalid token positions." });
     if (!Number.isInteger(turn) || turn < 0 || turn > 3 || !(dice === null || (Number.isInteger(dice) && dice >= 1 && dice <= 6)) || !(winner === null || (Number.isInteger(winner) && winner >= 0 && winner <= 3))) return res.status(400).json({ error: "Invalid game turn, dice or winner." });
