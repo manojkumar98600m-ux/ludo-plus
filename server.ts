@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 const app = express();
 const port = Number(process.env.PORT || 3000);
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "8mb" }));
 
 type RoomPlayer = { playerId: string; displayName: string; color: string; joinedAt: number };
 type GameSnapshot = { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number; updatedAt: number };
@@ -109,6 +109,30 @@ app.put("/api/ludo/rooms/:roomCode/state", (req, res) => {
 
 app.get("/api/chat/messages", (req, res) => { const after = Number(req.query.after || 0); return res.json({ messages: chatMessages.filter(m => m.createdAt > after).slice(-100) }); });
 app.post("/api/chat/messages", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : ""; const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0,1000) : ""; if (!playerId || !displayName || !text) return res.status(400).json({ error: "Name and message are required." }); const message: ChatMessage = { id: randomBytes(12).toString("hex"), playerId, displayName, text, createdAt: Date.now() }; chatMessages.push(message); if (chatMessages.length > 500) chatMessages.splice(0, chatMessages.length - 500); return res.status(201).json({ message }); });
+
+app.post("/api/uploads/image", async (req, res) => {
+  const supabaseUrl = process.env.SUPABASE_URL?.trim().replace(/\/$/, "");
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!supabaseUrl || !serviceKey) return res.status(503).json({ error: "Image storage is not configured yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to the backend, and create a public ludo-media bucket." });
+  const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
+  const contentType = typeof req.body?.contentType === "string" ? req.body.contentType : "";
+  if (!/^image\/(jpeg|png|webp|gif)$/.test(contentType)) return res.status(400).json({ error: "Choose a JPG, PNG, WEBP, or GIF image." });
+  const match = dataUrl.match(/^data:image\/(?:jpeg|png|webp|gif);base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) return res.status(400).json({ error: "Image data is invalid." });
+  const bytes = Buffer.from(match[1], "base64");
+  if (!bytes.length || bytes.length > 4 * 1024 * 1024) return res.status(413).json({ error: "Image must be smaller than 4 MB." });
+  const ext = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" } as Record<string,string>)[contentType];
+  const path = `posts/${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
+  try {
+    const response = await fetch(`${supabaseUrl}/storage/v1/object/ludo-media/${path}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, "Content-Type": contentType, "x-upsert": "false" },
+      body: bytes
+    });
+    if (!response.ok) return res.status(502).json({ error: "Image storage upload failed. Check Supabase bucket and server settings." });
+    return res.status(201).json({ imageUrl: `${supabaseUrl}/storage/v1/object/public/ludo-media/${path}` });
+  } catch { return res.status(502).json({ error: "Could not reach image storage." }); }
+});
 
 app.get("/api/posts", (_req, res) => res.json({ posts: [...feedPosts].reverse().slice(0,100) }));
 app.post("/api/posts", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : ""; const caption = typeof req.body?.caption === "string" ? req.body.caption.trim().slice(0,500) : ""; const imageUrl = typeof req.body?.imageUrl === "string" ? req.body.imageUrl.trim().slice(0,2000) : ""; if (!playerId || !displayName || (!caption && !imageUrl)) return res.status(400).json({ error: "Name and a caption or image URL are required." }); if (imageUrl && !imageUrl.startsWith("https://")) return res.status(400).json({ error: "Image URL must start with https://." }); const post: FeedPost = { id: randomBytes(12).toString("hex"), playerId, displayName, caption, imageUrl, createdAt: Date.now(), likes: [], comments: [] }; feedPosts.push(post); if (feedPosts.length > 200) feedPosts.shift(); return res.status(201).json({ post }); });
