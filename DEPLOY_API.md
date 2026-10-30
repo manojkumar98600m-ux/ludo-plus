@@ -29,5 +29,5 @@ The current profile editor saves display name and bio in the signed-in user's Su
 - Display name and bio can be edited after login and are saved to Auth user metadata.
 - Dating profiles shown are fictional demo cards. Likes are local-only and are not delivered to other users. The 18+ checkbox is self-declaration only, not age verification.
 - Do not launch real dating/matching until reliable age assurance, reporting, blocking, moderation, and privacy controls are implemented.
-- Ludo rooms and game state remain in server memory; Render restarts clear active rooms. Room sync uses polling, not WebSockets.
+- Private Ludo rooms and game state use Supabase when backend service-role configuration and the `ludo_rooms` table are present; without them, the fallback is temporary server memory. Room sync uses polling, not WebSockets.
 - PhonePe payments remain disabled until official merchant onboarding and server-side payment verification are complete. No test/demo payment is marked successful.
