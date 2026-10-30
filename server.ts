@@ -53,7 +53,7 @@ function makeRoomCode() {
   return code;
 }
 function publicRoom(room: Room) {
-  return { code: room.code, status: room.status, players: room.players, maxPlayers: 4, createdAt: room.createdAt, game: room.game };
+  return { code: room.code, hostId: room.hostId, status: room.status, players: room.players, maxPlayers: 4, createdAt: room.createdAt, game: room.game };
 }
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok", app: "LUDO PLUS" }));
