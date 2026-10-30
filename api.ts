@@ -58,5 +58,6 @@ export const api = {
     method: "POST", body: JSON.stringify({ displayName, playerId: getPlayerId() })
   }),
   getLudoRoom: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}`),
+  rollLudoRoomDice: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/roll`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
   updateLudoRoomState: (code: string, playerId: string, state: { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number }) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/state`, { method: "PUT", body: JSON.stringify({ ...state, playerId }) })
 };
