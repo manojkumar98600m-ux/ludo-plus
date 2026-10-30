@@ -1,4 +1,4 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "https://ludo-plus-api.onrender.com").replace(/\/$/, "");
 
 export type LudoRoom = {
   code: string;
