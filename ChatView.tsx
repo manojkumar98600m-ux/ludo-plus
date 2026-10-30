@@ -28,6 +28,6 @@ export default function ChatView() {
       {messages.map(m => <div className={m.playerId === ownId ? "chat-message chat-message-own" : "chat-message"} key={m.id}><b>{m.playerId === ownId ? "You" : m.displayName}</b><div className="chat-bubble">{m.text}</div><time>{new Date(m.createdAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</time></div>)}
     </div>
     <div className="chat-compose"><input value={draft} maxLength={1000} onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} placeholder="Write a message…" /><button className="primary-btn" onClick={() => void send()} disabled={sending || !draft.trim() || !name.trim()}>{sending ? "Sending…" : "Send"}</button></div>
-    {error && <p className="muted small" role="status">{error}</p>}<p className="muted small">Messages are shared through the API server and temporarily kept in memory. Avoid sharing private information.</p>
+    {error && <p className="muted small" role="status">{error}</p>}<p className="muted small">Messages are stored in Supabase when the backend database settings are configured; otherwise they are temporary. Avoid sharing private information.</p>
   </section>;
 }
