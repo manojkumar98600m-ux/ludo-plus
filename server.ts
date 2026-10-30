@@ -103,6 +103,27 @@ app.post("/api/ludo/rooms/:roomCode/join", async (req, res) => {
     return res.status(200).json({ room: publicRoom(room), host: false });
   } catch { return res.status(503).json({ error: "Room database is temporarily unavailable." }); }
 });
+app.post("/api/ludo/rooms/:roomCode/leave", async (req, res) => {
+  try {
+    const code = String(req.params.roomCode || "").trim().toUpperCase();
+    const room = await loadRoom(code);
+    if (!room) return res.status(404).json({ error: "Room not found." });
+    const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";
+    const index = room.players.findIndex(p => p.playerId === playerId);
+    if (index < 0) return res.status(403).json({ error: "Player is not in this room." });
+    if (room.status === "playing") return res.status(409).json({ error: "A player cannot leave after the game starts. Reconnect to continue." });
+    room.players.splice(index, 1);
+    if (room.players.length === 0) {
+      if (dbReady()) await dbRequest("ludo_rooms", "?room_code=eq." + encodeURIComponent(code), "DELETE");
+      else rooms.delete(code);
+      return res.json({ ok: true, deleted: true });
+    }
+    room.players.forEach((player, i) => { player.color = COLORS[i]; });
+    if (room.hostId === playerId) room.hostId = room.players[0].playerId;
+    await saveRoom(room);
+    return res.json({ ok: true, deleted: false, room: publicRoom(room) });
+  } catch { return res.status(503).json({ error: "Could not leave room." }); }
+});
 app.post("/api/ludo/rooms/:roomCode/heartbeat", async (req, res) => {
   try { const code = String(req.params.roomCode || "").trim().toUpperCase(); const room = await loadRoom(code);
     if (!room) return res.status(404).json({ error: "Room not found." });
