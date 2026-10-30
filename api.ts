@@ -19,7 +19,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
-function getPlayerId() {
+export function getPlayerId() {
   const key = "ludo-plus-player-id";
   let id = localStorage.getItem(key);
   if (!id) {
