@@ -356,8 +356,8 @@ app.get("/api/posts", async (_req, res) => {
     return res.json({ posts: [...feedPosts].reverse().slice(0,100) });
   } catch { return res.status(503).json({ error: "Posts database is temporarily unavailable." }); }
 });
-app.post("/api/posts", async (req, res) => {
-  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : "";
+app.post("/api/posts", verifySocialSession, async (req, res) => {
+  const playerId = String(req.verifiedSocialUserId || "");
   const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
   const caption = typeof req.body?.caption === "string" ? req.body.caption.trim().slice(0,500) : "";
   const imageUrl = typeof req.body?.imageUrl === "string" ? req.body.imageUrl.trim().slice(0,2000) : "";
@@ -370,8 +370,8 @@ app.post("/api/posts", async (req, res) => {
     return res.status(201).json({ post });
   } catch { return res.status(503).json({ error: "Post could not be saved. Check Supabase configuration." }); }
 });
-app.post("/api/posts/:postId/like", async (req, res) => {
-  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : "";
+app.post("/api/posts/:postId/like", verifySocialSession, async (req, res) => {
+  const playerId = String(req.verifiedSocialUserId || "");
   if (!playerId) return res.status(400).json({ error: "Player ID required." });
   try {
     if (dbReady()) {
@@ -390,8 +390,8 @@ app.post("/api/posts/:postId/like", async (req, res) => {
     return res.json({ post });
   } catch { return res.status(503).json({ error: "Post like could not be saved." }); }
 });
-app.post("/api/posts/:postId/comments", async (req, res) => {
-  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : "";
+app.post("/api/posts/:postId/comments", verifySocialSession, async (req, res) => {
+  const playerId = String(req.verifiedSocialUserId || "");
   const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
   const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0,300) : "";
   if (!playerId || !displayName || !text) return res.status(400).json({ error: "Name and comment required." });
@@ -423,7 +423,7 @@ app.get("/api/reels", async (_req, res) => {
     return res.json({ reels: [...reels].reverse().slice(0,100) });
   } catch { return res.status(503).json({ error: "Reels database is temporarily unavailable." }); }
 });
-app.post("/api/reels", async (req, res) => {
+app.post("/api/reels", verifySocialSession, async (req, res) => {
   const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.trim().slice(0,64) : "";
   const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
   const caption = typeof req.body?.caption === "string" ? req.body.caption.trim().slice(0,300) : "";
@@ -438,7 +438,7 @@ app.post("/api/reels", async (req, res) => {
     return res.status(201).json({ reel });
   } catch { return res.status(503).json({ error: "Reel could not be saved. Check Supabase configuration." }); }
 });
-app.post("/api/reels/:reelId/like", async (req, res) => {
+app.post("/api/reels/:reelId/like", verifySocialSession, async (req, res) => {
   const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.trim().slice(0,64) : "";
   if (!playerId) return res.status(400).json({ error: "Player ID required." });
   try {
