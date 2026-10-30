@@ -7,7 +7,7 @@ const port = Number(process.env.PORT || 3000);
 app.use(cors());
 app.use(express.json({ limit: "140mb" }));
 
-type RoomPlayer = { playerId: string; displayName: string; color: string; joinedAt: number };
+type RoomPlayer = { playerId: string; displayName: string; color: string; joinedAt: number; lastSeenAt?: number };
 type GameSnapshot = { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number; updatedAt: number };
 type Room = { code: string; hostId: string; status: "waiting" | "playing"; players: RoomPlayer[]; createdAt: number; game: GameSnapshot };
 const rooms = new Map<string, Room>();
@@ -103,7 +103,7 @@ app.post("/api/ludo/rooms/:roomCode/join", async (req, res) => {
     return res.status(200).json({ room: publicRoom(room), host: false });
   } catch { return res.status(503).json({ error: "Room database is temporarily unavailable." }); }
 });
-app.get("/api/ludo/rooms/:roomCode", async (req, res) => {
+app.post("/api/ludo/rooms/:roomCode/heartbeat", async (req, res) => {\n  try { const code = String(req.params.roomCode || "").trim().toUpperCase(); const room = await loadRoom(code);\n    if (!room) return res.status(404).json({ error: "Room not found." });\n    const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";\n    const player = room.players.find(p => p.playerId === playerId);\n    if (!player) return res.status(403).json({ error: "Player is not in this room." });\n    player.lastSeenAt = Date.now(); await saveRoom(room); return res.json({ ok: true, lastSeenAt: player.lastSeenAt });\n  } catch { return res.status(503).json({ error: "Heartbeat failed." }); }\n});\napp.get("/api/ludo/rooms/:roomCode", async (req, res) => {
   try { const room = await loadRoom(String(req.params.roomCode || "").trim().toUpperCase());
     if (!room) return res.status(404).json({ error: "Room not found." }); return res.json({ room: publicRoom(room) });
   } catch { return res.status(503).json({ error: "Room database is temporarily unavailable." }); }
