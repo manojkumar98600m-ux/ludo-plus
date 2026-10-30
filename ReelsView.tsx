@@ -31,6 +31,10 @@ export default function ReelsView() {
     try {
       let finalVideoUrl = videoUrl.trim();
       if (videoFile) {
+        const allowedTypes = ["video/mp4", "video/webm", "video/quicktime"];
+        if (!allowedTypes.includes(videoFile.type)) throw new Error("केवल MP4, WebM या MOV वीडियो चुनें।");
+        if (videoFile.size > 100 * 1024 * 1024) throw new Error("Video 100 MB या उससे छोटी होनी चाहिए।");
+        if (videoFile.size === 0) throw new Error("चुनी गई video खाली है।");
         const dataUrl = await fileAsDataUrl(videoFile);
         const uploaded = await api.uploadVideo(dataUrl, videoFile.type);
         finalVideoUrl = uploaded.videoUrl;
