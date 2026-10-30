@@ -1,16 +1,28 @@
-# LUDO PLUS API deployment
+# LUDO PLUS deployment and account setup
 
-The repository includes a Render Blueprint in `render.yaml`.
+## Frontend on Vercel
+Set these environment variables in Vercel → Project → Settings → Environment Variables, then redeploy:
 
-1. Open Render and choose **New → Blueprint**.
-2. Connect the GitHub repository `manojkumar98600m-ux/ludo-plus`.
-3. Select the `render.yaml` blueprint and deploy the `ludo-plus-api` web service.
-4. When Render gives the service URL, check `https://YOUR-SERVICE.onrender.com/api/health`. It should return JSON with status `ok`.
-5. In the Vercel project for the web app, add the environment variable `VITE_API_URL` with the Render service URL (no trailing slash), then redeploy the frontend.
+- `VITE_API_URL`: your Render API URL, without trailing slash.
+- `VITE_SUPABASE_URL`: Supabase Project URL.
+- `VITE_SUPABASE_ANON_KEY`: Supabase publishable/anon key (safe for browser use when RLS is enabled).
 
-## Current limitations
+Never put the Supabase service-role key in Vercel, browser code, or GitHub.
 
-- Rooms and game state are stored in server memory. Restarting/redeploying the API clears active rooms.
-- The current room sync uses polling (about every 2 seconds), not instant WebSocket updates.
-- This is a prototype backend. Add persistent storage, authentication, rate limits and server-authoritative move validation before a public launch.
-- PhonePe payments intentionally remain disabled until the merchant credentials and a verified server-side PhonePe integration are configured.
+## Enable email login
+1. Open Supabase Dashboard → Authentication → Providers → Email and enable Email.
+2. Configure Site URL and allowed redirect URLs for your Vercel domain.
+3. If email confirmation is enabled, users must confirm the email before logging in.
+4. Deploy the Vercel frontend again after adding the environment variables.
+
+## Backend on Render
+1. Deploy the `render.yaml` Blueprint using repository `manojkumar98600m-ux/ludo-plus`.
+2. Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` only to the Render service environment.
+3. Check `https://YOUR-SERVICE.onrender.com/api/health` for status `ok`.
+
+## Current limits
+- Email/password signup and login UI is implemented; it is inactive until the Vercel Supabase variables are configured.
+- The profile panel currently shows the authenticated email; full profile editing is still pending.
+- Ludo rooms and game state remain in server memory; restarts clear active rooms.
+- Room sync uses polling, not WebSockets.
+- PhonePe payments remain disabled until official merchant onboarding and server-side payment verification are complete.
