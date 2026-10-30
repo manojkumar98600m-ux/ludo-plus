@@ -103,9 +103,23 @@ export default function LudoBoard() {
     return () => window.clearTimeout(timer);
   }, [roomCode, room?.code, gameSignature]);
 
-  function rollDice() {
+  async function rollDice() {
     if (dice !== null || winner !== null) return;
-    const value = Math.floor(Math.random() * 6) + 1;
+    let value: number;
+    if (roomCode && room) {
+      try {
+        const result = await api.rollLudoRoomDice(roomCode);
+        setRoom(result.room);
+        revisionRef.current = result.room.game.revision;
+        value = result.room.game.dice as number;
+        signatureRef.current = JSON.stringify({ positions: result.room.game.positions, turn: result.room.game.turn, dice: value, winner: result.room.game.winner });
+      } catch (error) {
+        setRoomMessage(error instanceof Error ? error.message : "Server dice roll failed.");
+        return;
+      }
+    } else {
+      value = Math.floor(Math.random() * 6) + 1;
+    }
     setDice(value);
     const movable = positions[turn].some(pos => pos === -1 ? value === 6 : pos + value <= 57);
     setMessage(movable ? `${players[turn].name}: गोटी चुनें` : `${players[turn].name} को चाल नहीं मिली`);
