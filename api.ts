@@ -1,3 +1,4 @@
+import { getCurrentUser } from "./auth";
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "https://ludo-plus-api.onrender.com").replace(/\/$/, "");
 
 export type LudoRoom = {
@@ -13,7 +14,7 @@ export type LudoRoom = {
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...options.headers }
+    headers: { "Content-Type": "application/json", ...((path.startsWith("/api/posts") || path.startsWith("/api/reels")) && getCurrentUser()?.accessToken ? { Authorization: `Bearer ${getCurrentUser()!.accessToken}` } : {}), ...options.headers }
   });
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new Error(data?.error || `Request failed: ${response.status}`);
