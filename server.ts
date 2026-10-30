@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 const app = express();
 const port = Number(process.env.PORT || 3000);
 app.use(cors());
-app.use(express.json({ limit: "8mb" }));
+app.use(express.json({ limit: "12mb" }));
 
 type RoomPlayer = { playerId: string; displayName: string; color: string; joinedAt: number };
 type GameSnapshot = { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number; updatedAt: number };
@@ -134,6 +134,30 @@ app.post("/api/uploads/image", async (req, res) => {
     if (!response.ok) return res.status(502).json({ error: "Image storage upload failed. Check Supabase bucket and server settings." });
     return res.status(201).json({ imageUrl: `${supabaseUrl}/storage/v1/object/public/ludo-media/${path}` });
   } catch { return res.status(502).json({ error: "Could not reach image storage." }); }
+});
+
+app.post("/api/uploads/video", async (req, res) => {
+  const supabaseUrl = process.env.SUPABASE_URL?.trim().replace(/\/$/, "");
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!supabaseUrl || !serviceKey) return res.status(503).json({ error: "Video storage is not configured yet. Configure Supabase Storage first." });
+  const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
+  const contentType = typeof req.body?.contentType === "string" ? req.body.contentType : "";
+  const extensions: Record<string,string> = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };
+  if (!extensions[contentType]) return res.status(400).json({ error: "Choose an MP4, WebM, or MOV video." });
+  const match = dataUrl.match(/^data:video\/(?:mp4|webm|quicktime);base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) return res.status(400).json({ error: "Video data is invalid." });
+  const bytes = Buffer.from(match[1], "base64");
+  if (!bytes.length || bytes.length > 8 * 1024 * 1024) return res.status(413).json({ error: "Video must be 8 MB or smaller." });
+  const path = `reels/${Date.now()}-${randomBytes(8).toString("hex")}.${extensions[contentType]}`;
+  try {
+    const response = await fetch(`${supabaseUrl}/storage/v1/object/ludo-media/${path}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, "Content-Type": contentType, "x-upsert": "false" },
+      body: bytes
+    });
+    if (!response.ok) return res.status(502).json({ error: "Video storage upload failed. Check Supabase bucket and server settings." });
+    return res.status(201).json({ videoUrl: `${supabaseUrl}/storage/v1/object/public/ludo-media/${path}` });
+  } catch { return res.status(502).json({ error: "Could not reach video storage." }); }
 });
 
 app.get("/api/posts", (_req, res) => res.json({ posts: [...feedPosts].reverse().slice(0,100) }));
