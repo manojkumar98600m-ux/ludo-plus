@@ -237,7 +237,7 @@ app.get("/api/reels", async (_req, res) => {
     return res.json({ reels: [...reels].reverse().slice(0,100) });
   } catch { return res.status(503).json({ error: "Reels database is temporarily unavailable." }); }
 });
-app.post("/api/reels", (req, res) => {
+app.post("/api/reels", async (req, res) => {
   const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.trim().slice(0,64) : "";
   const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
   const caption = typeof req.body?.caption === "string" ? req.body.caption.trim().slice(0,300) : "";
