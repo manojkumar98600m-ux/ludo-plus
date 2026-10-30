@@ -177,7 +177,15 @@ export default function LudoBoard() {
         tokens
       };
     }
-    if (r >= 6 && r <= 8 && c >= 6 && c <= 8) return { cls: "finish-cell", label: (r === 7 && c === 7) ? "✦" : "", tokens: [] as string[] };
+    if (r >= 6 && r <= 8 && c >= 6 && c <= 8) {
+      const finishSpots: Record<string, number> = { "6-6": 0, "6-8": 1, "8-8": 2, "8-6": 3 };
+      const finishedPlayer = finishSpots[`${r}-${c}`];
+      if (finishedPlayer !== undefined) {
+        const tokens = positions[finishedPlayer].map((pos, ti) => pos === 57 ? players[finishedPlayer].css + (ti + 1) : "").filter(Boolean);
+        return { cls: `finish-cell finish-${players[finishedPlayer].css}`, label: "", tokens };
+      }
+      return { cls: "finish-cell", label: (r === 7 && c === 7) ? "✦" : "", tokens: [] as string[] };
+    }
     return { cls: "empty-cell", label: "", tokens: [] as string[] };
   }
 
