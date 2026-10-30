@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { api, type LudoRoom } from "./api";
+import { useEffect, useRef, useState } from "react";
+import { api, getPlayerId, type LudoRoom } from "./api";
 
 type Player = { name: string; color: string; start: number; css: string };
 const players: Player[] = [
@@ -44,6 +44,64 @@ export default function LudoBoard() {
   const [displayName, setDisplayName] = useState("Player");
   const [room, setRoom] = useState<LudoRoom | null>(null);
   const [roomBusy, setRoomBusy] = useState(false);
+  const revisionRef = useRef(0);
+  const applyingRemoteRef = useRef(false);
+  const signatureRef = useRef("");
+
+  const gameSignature = JSON.stringify({ positions, turn, dice, winner });
+
+  useEffect(() => {
+    if (!roomCode || !room) return;
+    let active = true;
+    const poll = async () => {
+      try {
+        const result = await api.getLudoRoom(roomCode);
+        if (!active) return;
+        setRoom(result.room);
+        if (result.room.game.revision > revisionRef.current) {
+          applyingRemoteRef.current = true;
+          revisionRef.current = result.room.game.revision;
+          signatureRef.current = JSON.stringify({ positions: result.room.game.positions, turn: result.room.game.turn, dice: result.room.game.dice, winner: result.room.game.winner });
+          setPositions(result.room.game.positions.map(row => [...row]));
+          setTurn(result.room.game.turn);
+          setDice(result.room.game.dice);
+          setWinner(result.room.game.winner);
+          setMessage(result.room.game.winner !== null ? `${players[result.room.game.winner].name} जीत गया! 🎉` : `${players[result.room.game.turn].name} की बारी है`);
+        }
+      } catch { /* Keep the last known room state during brief network interruptions. */ }
+    };
+    void poll();
+    const timer = window.setInterval(poll, 2000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [roomCode, room?.code]);
+
+  useEffect(() => {
+    if (!roomCode || !room) return;
+    if (applyingRemoteRef.current) { applyingRemoteRef.current = false; return; }
+    if (signatureRef.current === gameSignature) return;
+    signatureRef.current = gameSignature;
+    const expectedRevision = revisionRef.current;
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await api.updateLudoRoomState(roomCode, getPlayerId(), { positions, turn, dice, winner, revision: expectedRevision });
+        revisionRef.current = result.room.game.revision;
+        setRoom(result.room);
+      } catch {
+        try {
+          const latest = await api.getLudoRoom(roomCode);
+          setRoom(latest.room);
+          if (latest.room.game.revision > revisionRef.current) {
+            applyingRemoteRef.current = true;
+            revisionRef.current = latest.room.game.revision;
+            signatureRef.current = JSON.stringify({ positions: latest.room.game.positions, turn: latest.room.game.turn, dice: latest.room.game.dice, winner: latest.room.game.winner });
+            setPositions(latest.room.game.positions.map(row => [...row]));
+            setTurn(latest.room.game.turn); setDice(latest.room.game.dice); setWinner(latest.room.game.winner);
+          }
+        } catch { setRoomMessage("Sync नहीं हो पाया। Server connection जाँचें।"); }
+      }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [roomCode, room?.code, gameSignature]);
 
   function rollDice() {
     if (dice !== null || winner !== null) return;
@@ -125,12 +183,12 @@ export default function LudoBoard() {
     <div className="game-status"><strong>{message}</strong><span>Current player: <b>{players[turn].name}</b></span></div>
     <div className="dice-row"><button className="primary-btn" onClick={rollDice} disabled={dice !== null || winner !== null}>Roll dice</button><strong className="dice">{dice ?? "—"}</strong><button className="secondary-btn" onClick={resetGame}>New game</button></div>
     {winner !== null && <p className="winner-banner">🏆 {players[winner].name} wins!</p>}
-    <p className="muted small">15×15 visual board with local pass-and-play controls. Online synchronized turns still require a live game server.</p>
+    <p className="muted small">Private room में game state polling से sync होता है; API server दोनों फोन के लिए उपलब्ध होना चाहिए।</p>
     <section className="private-room">
       <h3>🔐 Private Ludo Room</h3>
-      <p className="muted small">Room code preview — अभी दूसरे फोन से live join नहीं होगा।</p>
-      <div className="room-actions"><input aria-label="Your player name" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value.slice(0,24))}/><button className="secondary-btn" disabled={roomBusy || !displayName.trim()} onClick={async () => { setRoomBusy(true); try { const result = await api.createLudoRoom(displayName.trim()); setRoom(result.room); setRoomCode(result.room.code); setRoomMessage("Room server पर बन गया। Code अपने दोस्तों को भेजें।"); } catch (error) { setRoomMessage(error instanceof Error ? error.message : "Room create नहीं हुआ। API server URL check करें।"); } finally { setRoomBusy(false); } }}>{roomBusy ? "Please wait…" : "Create room"}</button>{roomCode && <strong className="room-code">{roomCode}</strong>}</div>
-      <div className="room-actions"><input aria-label="Enter room code" placeholder="Enter room code" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 8))}/><button className="secondary-btn" disabled={roomBusy || !joinCode.trim() || !displayName.trim()} onClick={async () => { setRoomBusy(true); try { const result = await api.joinLudoRoom(joinCode.trim(), displayName.trim()); setRoom(result.room); setRoomCode(result.room.code); setRoomMessage(`Room join हो गया: ${result.room.players.length}/4 players`); } catch (error) { setRoomMessage(error instanceof Error ? error.message : "Room join नहीं हुआ। API server URL check करें।"); } finally { setRoomBusy(false); } }}>Join room</button></div>
+      <p className="muted small">Room code से जुड़ें; game state लगभग हर 2 सेकंड में sync होगा।</p>
+      <div className="room-actions"><input aria-label="Your player name" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value.slice(0,24))}/><button className="secondary-btn" disabled={roomBusy || !displayName.trim()} onClick={async () => { setRoomBusy(true); try { const result = await api.createLudoRoom(displayName.trim()); setRoom(result.room); setRoomCode(result.room.code); revisionRef.current = result.room.game.revision; signatureRef.current = JSON.stringify({ positions: result.room.game.positions, turn: result.room.game.turn, dice: result.room.game.dice, winner: result.room.game.winner }); setPositions(result.room.game.positions.map(row => [...row])); setTurn(result.room.game.turn); setDice(result.room.game.dice); setWinner(result.room.game.winner); setRoomMessage("Room बन गया। Code अपने दोस्तों को भेजें।"); } catch (error) { setRoomMessage(error instanceof Error ? error.message : "Room create नहीं हुआ। API server URL check करें।"); } finally { setRoomBusy(false); } }}>{roomBusy ? "Please wait…" : "Create room"}</button>{roomCode && <strong className="room-code">{roomCode}</strong>}</div>
+      <div className="room-actions"><input aria-label="Enter room code" placeholder="Enter room code" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 8))}/><button className="secondary-btn" disabled={roomBusy || !joinCode.trim() || !displayName.trim()} onClick={async () => { setRoomBusy(true); try { const result = await api.joinLudoRoom(joinCode.trim(), displayName.trim()); setRoom(result.room); setRoomCode(result.room.code); revisionRef.current = result.room.game.revision; signatureRef.current = JSON.stringify({ positions: result.room.game.positions, turn: result.room.game.turn, dice: result.room.game.dice, winner: result.room.game.winner }); setPositions(result.room.game.positions.map(row => [...row])); setTurn(result.room.game.turn); setDice(result.room.game.dice); setWinner(result.room.game.winner); setRoomMessage(`Room join हो गया: ${result.room.players.length}/4 players`); } catch (error) { setRoomMessage(error instanceof Error ? error.message : "Room join नहीं हुआ। API server URL check करें।"); } finally { setRoomBusy(false); } }}>Join room</button></div>
       {room && <div className="room-members"><b>Room {room.code} · {room.players.length}/4</b>{room.players.map(player => <span key={player.playerId}>{player.displayName} · {player.color}</span>)}</div>}
       <p className="muted small">{roomMessage}</p>
     </section>
