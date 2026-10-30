@@ -108,6 +108,49 @@ app.get("/api/ludo/rooms/:roomCode", async (req, res) => {
     if (!room) return res.status(404).json({ error: "Room not found." }); return res.json({ room: publicRoom(room) });
   } catch { return res.status(503).json({ error: "Room database is temporarily unavailable." }); }
 });
+function samePositions(a: number[][], b: unknown): boolean {
+  return Array.isArray(b) && b.length === 4 && a.every((row, i) => Array.isArray(b[i]) && row.length === 4 && row.every((v, j) => v === b[i][j]));
+}
+function validMoveTransition(room: Room, positions: number[][], turn: number, dice: number | null, winner: number | null): boolean {
+  const old = room.game;
+  if (old.winner !== null) return false;
+  // A roll must not alter pieces, turn or winner.
+  if (old.dice === null && dice !== null) return samePositions(old.positions, positions) && turn === old.turn && winner === old.winner;
+  // A move/skip must consume the previous roll.
+  if (old.dice === null || dice !== null) return false;
+  const changed: { player: number; token: number }[] = [];
+  for (let p = 0; p < 4; p++) for (let t = 0; t < 4; t++) if (old.positions[p][t] !== positions[p][t]) changed.push({ player: p, token: t });
+  const roll = old.dice;
+  if (changed.length === 0) {
+    const canMove = old.positions[old.turn].some(pos => pos === -1 ? roll === 6 : pos >= 0 && pos + roll <= 57);
+    return !canMove && turn === (old.turn + 1) % 4 && winner === null;
+  }
+  if (changed.some(x => x.player !== old.turn)) return false;
+  if (changed.length !== 1) return false;
+  const { token } = changed[0];
+  const from = old.positions[old.turn][token];
+  const to = positions[old.turn][token];
+  const expected = from === -1 ? (roll === 6 ? 0 : -99) : from + roll;
+  if (to !== expected || to > 57) return false;
+  // Other players may only have tokens sent home by a legal capture.
+  const expectedBoard = old.positions.map(row => [...row]);
+  expectedBoard[old.turn][token] = to;
+  if (to < 51) {
+    const landing = ([0, 13, 26, 39][old.turn] + to) % 52;
+    if (![0,8,13,21,26,34,39,47].includes(landing)) {
+      for (let p = 0; p < 4; p++) if (p !== old.turn) for (let t = 0; t < 4; t++) {
+        const pos = expectedBoard[p][t];
+        if (pos >= 0 && pos < 51 && ([0,13,26,39][p] + pos) % 52 === landing) expectedBoard[p][t] = -1;
+      }
+    }
+  }
+  if (!samePositions(expectedBoard, positions)) return false;
+  const won = positions[old.turn].every(pos => pos === 57);
+  if ((winner === old.turn) !== won) return false;
+  const expectedTurn = won || roll === 6 ? old.turn : (old.turn + 1) % 4;
+  return turn === expectedTurn;
+}
+
 app.put("/api/ludo/rooms/:roomCode/state", async (req, res) => {
   try { const room = await loadRoom(String(req.params.roomCode || "").trim().toUpperCase());
     if (!room) return res.status(404).json({ error: "Room not found." });
@@ -118,6 +161,7 @@ app.put("/api/ludo/rooms/:roomCode/state", async (req, res) => {
     const positions = req.body?.positions, turn = req.body?.turn, dice = req.body?.dice, winner = req.body?.winner;
     if (!Array.isArray(positions) || positions.length !== 4 || positions.some((row: unknown) => !Array.isArray(row) || row.length !== 4 || row.some((v: unknown) => !Number.isInteger(v) || (v as number) < -1 || (v as number) > 57))) return res.status(400).json({ error: "Invalid token positions." });
     if (!Number.isInteger(turn) || turn < 0 || turn > 3 || !(dice === null || (Number.isInteger(dice) && dice >= 1 && dice <= 6)) || !(winner === null || (Number.isInteger(winner) && winner >= 0 && winner <= 3))) return res.status(400).json({ error: "Invalid game turn, dice or winner." });
+    if (!validMoveTransition(room, positions, turn, dice, winner)) return res.status(400).json({ error: "Illegal Ludo move or game-state transition." });
     const expectedRevision = Number(req.body?.revision);
     if (Number.isInteger(expectedRevision) && expectedRevision !== room.game.revision) return res.status(409).json({ error: "Game state changed. Refresh the room and try again.", room: publicRoom(room) });
     room.game = { positions, turn, dice, winner, revision: room.game.revision + 1, updatedAt: Date.now() }; room.status = "playing"; await saveRoom(room);
