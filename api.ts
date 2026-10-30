@@ -31,7 +31,11 @@ export function getPlayerId() {
   return id;
 }
 
+export type ChatMessage = { id: string; playerId: string; displayName: string; text: string; createdAt: number };
+
 export const api = {
+  getChatMessages: () => request<{ messages: ChatMessage[] }>("/api/chat/messages"),
+  sendChatMessage: (displayName: string, text: string) => request<{ message: ChatMessage }>("/api/chat/messages", { method: "POST", body: JSON.stringify({ displayName, text, playerId: getPlayerId() }) }),
   health: () => request<{ status: string; app: string }>("/api/health"),
   merchantConfig: () => request<{ configured: boolean; paymentEnabled: boolean; status: string }>("/api/payment/merchant-config"),
   createLudoRoom: (displayName: string) => request<{ room: LudoRoom; host: boolean }>("/api/ludo/rooms", {
