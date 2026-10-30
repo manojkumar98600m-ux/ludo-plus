@@ -57,7 +57,8 @@ export const api = {
   joinLudoRoom: (code: string, displayName: string) => request<{ room: LudoRoom; host: boolean }>(`/api/ludo/rooms/${encodeURIComponent(code)}/join`, {
     method: "POST", body: JSON.stringify({ displayName, playerId: getPlayerId() })
   }),
-  getLudoRoom: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}`),\n  heartbeatLudoRoom: (code: string) => request<{ ok: boolean; lastSeenAt: number }>(`/api/ludo/rooms/${encodeURIComponent(code)}/heartbeat`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
+  getLudoRoom: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}`),
+  heartbeatLudoRoom: (code: string) => request<{ ok: boolean; lastSeenAt: number }>(`/api/ludo/rooms/${encodeURIComponent(code)}/heartbeat`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
   rollLudoRoomDice: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/roll`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
   updateLudoRoomState: (code: string, playerId: string, state: { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number }) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/state`, { method: "PUT", body: JSON.stringify({ ...state, playerId }) })
 };
