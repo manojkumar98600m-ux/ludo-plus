@@ -2,6 +2,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL || "https://ludo-plus-api.onr
 
 export type LudoRoom = {
   code: string;
+  hostId: string;
   status: "waiting" | "playing";
   players: { playerId: string; displayName: string; color: string; joinedAt: number; lastSeenAt?: number }[];
   maxPlayers: number;
