@@ -3,7 +3,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL || "https://ludo-plus-api.onr
 export type LudoRoom = {
   code: string;
   status: "waiting" | "playing";
-  players: { playerId: string; displayName: string; color: string; joinedAt: number }[];
+  players: { playerId: string; displayName: string; color: string; joinedAt: number; lastSeenAt?: number }[];
   maxPlayers: number;
   createdAt: number;
   game: { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number; updatedAt: number };
@@ -57,7 +57,7 @@ export const api = {
   joinLudoRoom: (code: string, displayName: string) => request<{ room: LudoRoom; host: boolean }>(`/api/ludo/rooms/${encodeURIComponent(code)}/join`, {
     method: "POST", body: JSON.stringify({ displayName, playerId: getPlayerId() })
   }),
-  getLudoRoom: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}`),
+  getLudoRoom: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}`),\n  heartbeatLudoRoom: (code: string) => request<{ ok: boolean; lastSeenAt: number }>(`/api/ludo/rooms/${encodeURIComponent(code)}/heartbeat`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
   rollLudoRoomDice: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/roll`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
   updateLudoRoomState: (code: string, playerId: string, state: { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number }) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/state`, { method: "PUT", body: JSON.stringify({ ...state, playerId }) })
 };
