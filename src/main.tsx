@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import LudoBoard from "../LudoBoard";
 import "./style.css";
 
 function App() {
@@ -15,14 +16,14 @@ function App() {
           <h1>Game. Friends. Fun.</h1>
           <p>Your place to play Ludo and connect with friends.</p>
         </section>
+        <LudoBoard />
         <div className="grid">
-          <section className="tile"><div className="emoji">🎲</div><h2>Play Ludo</h2><p>Local game preview. Online multiplayer setup is still required.</p></section>
-          <section className="tile"><div className="emoji">❤️</div><h2>Dating & Friends</h2><p>Discover profiles and make connections. Account and safety setup required.</p></section>
-          <section className="tile"><div className="emoji">🎬</div><h2>Reels & Posts</h2><p>Share moments. Upload and feed services are not connected yet.</p></section>
-          <section className="tile"><div className="emoji">💬</div><h2>Chat & Calls</h2><p>Messaging and calling services need backend integration.</p></section>
+          <section className="tile"><div className="emoji">❤️</div><h2>Dating & Friends</h2><p>Profile discovery preview. Secure accounts, age checks and matching services are not connected yet.</p></section>
+          <section className="tile"><div className="emoji">🎬</div><h2>Reels & Posts</h2><p>Social feed preview. Uploads, likes and comments need backend storage.</p></section>
+          <section className="tile"><div className="emoji">💬</div><h2>Chat & Calls</h2><p>Messaging and voice/video calls need real-time service integration.</p></section>
         </div>
         <section className="membership">
-          <div><span className="eyebrow">LUDO PLUS PREMIUM</span><h2>90 days membership</h2><p>₹50 total · PhonePe setup pending</p></div>
+          <div><span className="eyebrow">LUDO PLUS PREMIUM</span><h2>90 days membership</h2><p>₹50 total · PhonePe setup pending — no payment will be marked successful until a real merchant gateway is connected.</p></div>
           <span className="crown">👑</span>
         </section>
       </main>
