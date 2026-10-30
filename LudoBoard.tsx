@@ -164,7 +164,17 @@ export default function LudoBoard() {
       }
     }
     const owner = baseOwner(r, c);
-    if (owner >= 0) return { cls: `yard-cell ${players[owner].css}`, label: (r % 2 === 0 && c % 2 === 0) ? "●" : "", tokens: [] as string[] };
+    if (owner >= 0) {
+      const localR = r < 6 ? r : r > 8 ? r - 9 : r;
+      const localC = c < 6 ? c : c > 8 ? c - 9 : c;
+      const inHomeBase = localR >= 1 && localR <= 4 && localC >= 1 && localC <= 4;
+      const tokenSpot = (localR === 1 || localR === 4) && (localC === 1 || localC === 4);
+      return {
+        cls: `yard-cell ${players[owner].css}${inHomeBase ? " yard-base" : ""}`,
+        label: tokenSpot ? "●" : "",
+        tokens: [] as string[]
+      };
+    }
     if (r >= 6 && r <= 8 && c >= 6 && c <= 8) return { cls: "finish-cell", label: (r === 7 && c === 7) ? "✦" : "", tokens: [] as string[] };
     return { cls: "empty-cell", label: "", tokens: [] as string[] };
   }
