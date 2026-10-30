@@ -41,6 +41,33 @@ async function dbRequest(table: string, query: string, method = "GET", body?: un
   return response.json();
 }
 function dbReady() { return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY); }
+async function verifySocialSession(req: any, res: any, next: any) {
+  const authorization = String(req.headers.authorization || "");
+  const accessToken = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+  if (!accessToken || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    res.status(401).json({ error: "Please log in to use posts and reels." });
+    return;
+  }
+  try {
+    const result = await fetch(SUPABASE_URL + "/auth/v1/user", {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + accessToken }
+    });
+    if (!result.ok) {
+      res.status(401).json({ error: "Your login session is invalid. Please sign in again." });
+      return;
+    }
+    const account = await result.json() as { id?: string };
+    if (!account.id) {
+      res.status(401).json({ error: "Please sign in again." });
+      return;
+    }
+    req.verifiedSocialUserId = account.id;
+    next();
+  } catch {
+    res.status(503).json({ error: "Could not verify login right now. Please try again." });
+  }
+}
+
 
 
 function cleanExpiredRooms() {
