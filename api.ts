@@ -36,7 +36,7 @@ export type ChatMessage = { id: string; playerId: string; displayName: string; t
 export type FeedComment = { id: string; playerId: string; displayName: string; text: string; createdAt: number };
 export type FeedPost = { id: string; playerId: string; displayName: string; caption: string; imageUrl: string; createdAt: number; likes: string[]; comments: FeedComment[] };
 
-export const api = {
+export const api = {\n  uploadImage: (dataUrl: string, contentType: string) => request<{ imageUrl: string }>("/api/uploads/image", { method: "POST", body: JSON.stringify({ dataUrl, contentType }) }),
   getPosts: () => request<{ posts: FeedPost[] }>("/api/posts"),
   createPost: (displayName: string, caption: string, imageUrl: string) => request<{ post: FeedPost }>("/api/posts", { method: "POST", body: JSON.stringify({ displayName, caption, imageUrl, playerId: getPlayerId() }) }),
   togglePostLike: (postId: string) => request<{ post: FeedPost }>(`/api/posts/${encodeURIComponent(postId)}/like`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
