@@ -26,3 +26,15 @@ async function authRequest(path: string, email: string, password: string) {
 }
 export const signIn = (email: string, password: string) => authRequest("token?grant_type=password", email, password);
 export const signUp = (email: string, password: string) => authRequest("signup", email, password);
+
+export async function updateUserProfile(user: AuthUser, profile: { displayName: string; bio: string }) {
+  if (!authConfigured()) throw new Error("Supabase Auth setup pending.");
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${user.accessToken}` },
+    body: JSON.stringify({ data: { display_name: profile.displayName.trim().slice(0,40), bio: profile.bio.trim().slice(0,160) } })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.msg || data.message || "Profile could not be saved.");
+  return { displayName: data.user_metadata?.display_name || profile.displayName, bio: data.user_metadata?.bio || profile.bio };
+}
