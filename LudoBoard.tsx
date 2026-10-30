@@ -184,7 +184,9 @@ export default function LudoBoard() {
     <div className="ludo15" role="img" aria-label="15 by 15 Ludo board">
       {Array.from({ length: 15 }, (_, r) => Array.from({ length: 15 }, (_, c) => {
         const cell = cellContent(r, c);
-        return <div key={`${r}-${c}`} className={`ludo-cell ${cell.cls}`} title={cell.label}>{cell.label}</div>;
+        return <div key={`${r}-${c}`} className={`ludo-cell ${cell.cls}`} title={cell.label}>
+          {cell.tokens.length > 0 ? <span className="board-pieces">{cell.tokens.map((token, i) => <i key={`${token}-${i}`} className={`board-piece ${token.slice(0, -1)}`} aria-label={token} />)}</span> : cell.label}
+        </div>;
       }))}
     </div>
     <div className="token-chooser">
