@@ -4,7 +4,7 @@ export type LudoRoom = {
   code: string;
   hostId: string;
   status: "waiting" | "playing";
-  players: { playerId: string; displayName: string; color: string; joinedAt: number; lastSeenAt?: number }[];
+  players: { playerId: string; displayName: string; color: string; joinedAt: number; lastSeenAt?: number; ready?: boolean }[];
   maxPlayers: number;
   createdAt: number;
   game: { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number; updatedAt: number };
@@ -60,7 +60,7 @@ export const api = {
   }),
   getLudoRoom: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}`),
   leaveLudoRoom: (code: string) => request<{ ok: boolean; deleted: boolean; room?: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/leave`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
-  heartbeatLudoRoom: (code: string) => request<{ ok: boolean; lastSeenAt: number }>(`/api/ludo/rooms/${encodeURIComponent(code)}/heartbeat`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
+  setLudoReady: (code: string, ready: boolean) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/ready`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId(), ready }) }),\n  startLudoRoom: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/start`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),\n  heartbeatLudoRoom: (code: string) => request<{ ok: boolean; lastSeenAt: number }>(`/api/ludo/rooms/${encodeURIComponent(code)}/heartbeat`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
   rollLudoRoomDice: (code: string) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/roll`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
   updateLudoRoomState: (code: string, playerId: string, state: { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number }) => request<{ room: LudoRoom }>(`/api/ludo/rooms/${encodeURIComponent(code)}/state`, { method: "PUT", body: JSON.stringify({ ...state, playerId }) })
 };
