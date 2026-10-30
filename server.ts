@@ -103,7 +103,15 @@ app.post("/api/ludo/rooms/:roomCode/join", async (req, res) => {
     return res.status(200).json({ room: publicRoom(room), host: false });
   } catch { return res.status(503).json({ error: "Room database is temporarily unavailable." }); }
 });
-app.post("/api/ludo/rooms/:roomCode/heartbeat", async (req, res) => {\n  try { const code = String(req.params.roomCode || "").trim().toUpperCase(); const room = await loadRoom(code);\n    if (!room) return res.status(404).json({ error: "Room not found." });\n    const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";\n    const player = room.players.find(p => p.playerId === playerId);\n    if (!player) return res.status(403).json({ error: "Player is not in this room." });\n    player.lastSeenAt = Date.now(); await saveRoom(room); return res.json({ ok: true, lastSeenAt: player.lastSeenAt });\n  } catch { return res.status(503).json({ error: "Heartbeat failed." }); }\n});\napp.get("/api/ludo/rooms/:roomCode", async (req, res) => {
+app.post("/api/ludo/rooms/:roomCode/heartbeat", async (req, res) => {
+  try { const code = String(req.params.roomCode || "").trim().toUpperCase(); const room = await loadRoom(code);
+    if (!room) return res.status(404).json({ error: "Room not found." });
+    const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";
+    const player = room.players.find(p => p.playerId === playerId);
+    if (!player) return res.status(403).json({ error: "Player is not in this room." });
+    player.lastSeenAt = Date.now(); await saveRoom(room); return res.json({ ok: true, lastSeenAt: player.lastSeenAt });
+  } catch { return res.status(503).json({ error: "Heartbeat failed." }); }
+});\napp.get("/api/ludo/rooms/:roomCode", async (req, res) => {
   try { const room = await loadRoom(String(req.params.roomCode || "").trim().toUpperCase());
     if (!room) return res.status(404).json({ error: "Room not found." }); return res.json({ room: publicRoom(room) });
   } catch { return res.status(503).json({ error: "Room database is temporarily unavailable." }); }
