@@ -11,6 +11,8 @@ type RoomPlayer = { playerId: string; displayName: string; color: string; joined
 type GameSnapshot = { positions: number[][]; turn: number; dice: number | null; winner: number | null; revision: number; updatedAt: number };
 type Room = { code: string; hostId: string; status: "waiting" | "playing"; players: RoomPlayer[]; createdAt: number; game: GameSnapshot };
 const rooms = new Map<string, Room>();
+type ChatMessage = { id: string; playerId: string; displayName: string; text: string; createdAt: number };
+const chatMessages: ChatMessage[] = [];
 const COLORS = ["red", "green", "yellow", "blue"];
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 
@@ -102,6 +104,9 @@ app.put("/api/ludo/rooms/:roomCode/state", (req, res) => {
   room.status = "playing";
   return res.json({ room: publicRoom(room) });
 });
+
+app.get("/api/chat/messages", (req, res) => { const after = Number(req.query.after || 0); return res.json({ messages: chatMessages.filter(m => m.createdAt > after).slice(-100) }); });
+app.post("/api/chat/messages", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : ""; const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0,1000) : ""; if (!playerId || !displayName || !text) return res.status(400).json({ error: "Name and message are required." }); const message: ChatMessage = { id: randomBytes(12).toString("hex"), playerId, displayName, text, createdAt: Date.now() }; chatMessages.push(message); if (chatMessages.length > 500) chatMessages.splice(0, chatMessages.length - 500); return res.status(201).json({ message }); });
 
 app.get("/api/posts", (_req, res) => res.json({ posts: [] }));
 app.get("/api/reels", (_req, res) => res.json({ reels: [] }));
