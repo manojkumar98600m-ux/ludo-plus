@@ -48,7 +48,7 @@ export const api = {
   createPost: (displayName: string, caption: string, imageUrl: string) => request<{ post: FeedPost }>("/api/posts", { method: "POST", body: JSON.stringify({ displayName, caption, imageUrl, playerId: getPlayerId() }) }),
   togglePostLike: (postId: string) => request<{ post: FeedPost }>(`/api/posts/${encodeURIComponent(postId)}/like`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId() }) }),
   commentOnPost: (postId: string, displayName: string, text: string) => request<{ post: FeedPost }>(`/api/posts/${encodeURIComponent(postId)}/comments`, { method: "POST", body: JSON.stringify({ playerId: getPlayerId(), displayName, text }) }),
-  getChatMessages: () => request<{ messages: ChatMessage[] }>("/api/chat/messages"),
+  getChatMessages: (after = 0) => request<{ messages: ChatMessage[] }>(`/api/chat/messages?after=${encodeURIComponent(String(after))}`),
   sendChatMessage: (displayName: string, text: string) => request<{ message: ChatMessage }>("/api/chat/messages", { method: "POST", body: JSON.stringify({ displayName, text, playerId: getPlayerId() }) }),
   health: () => request<{ status: string; app: string }>("/api/health"),
   merchantConfig: () => request<{ configured: boolean; paymentEnabled: boolean; status: string }>("/api/payment/merchant-config"),
