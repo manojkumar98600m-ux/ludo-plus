@@ -111,7 +111,8 @@ app.post("/api/ludo/rooms/:roomCode/heartbeat", async (req, res) => {
     if (!player) return res.status(403).json({ error: "Player is not in this room." });
     player.lastSeenAt = Date.now(); await saveRoom(room); return res.json({ ok: true, lastSeenAt: player.lastSeenAt });
   } catch { return res.status(503).json({ error: "Heartbeat failed." }); }
-});\napp.get("/api/ludo/rooms/:roomCode", async (req, res) => {
+});
+app.get("/api/ludo/rooms/:roomCode", async (req, res) => {
   try { const room = await loadRoom(String(req.params.roomCode || "").trim().toUpperCase());
     if (!room) return res.status(404).json({ error: "Room not found." }); return res.json({ room: publicRoom(room) });
   } catch { return res.status(503).json({ error: "Room database is temporarily unavailable." }); }
