@@ -18,7 +18,30 @@ const feedPosts: FeedPost[] = [];
 type Reel = { id: string; playerId: string; displayName: string; caption: string; videoUrl: string; createdAt: number; likes: string[] };
 const reels: Reel[] = [];
 const COLORS = ["red", "green", "yellow", "blue"];
-const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
+const ROOM_TTL_MS = 6 * 60 * 60 * 1000;\n
+const SUPABASE_URL = process.env.SUPABASE_URL?.trim().replace(/\/$/, "");
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+async function dbRequest(table: string, query: string, method = "GET", body?: unknown) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
+    method,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: method === "POST" ? "return=representation" : "return=representation"
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) })
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Supabase ${table} request failed (${response.status}): ${detail.slice(0, 250)}`);
+  }
+  if (response.status === 204) return [];
+  return response.json();
+}
+function dbReady() { return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY); }
+
 
 function cleanExpiredRooms() {
   const cutoff = Date.now() - ROOM_TTL_MS;
@@ -109,8 +132,28 @@ app.put("/api/ludo/rooms/:roomCode/state", (req, res) => {
   return res.json({ room: publicRoom(room) });
 });
 
-app.get("/api/chat/messages", (req, res) => { const after = Number(req.query.after || 0); return res.json({ messages: chatMessages.filter(m => m.createdAt > after).slice(-100) }); });
-app.post("/api/chat/messages", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : ""; const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0,1000) : ""; if (!playerId || !displayName || !text) return res.status(400).json({ error: "Name and message are required." }); const message: ChatMessage = { id: randomBytes(12).toString("hex"), playerId, displayName, text, createdAt: Date.now() }; chatMessages.push(message); if (chatMessages.length > 500) chatMessages.splice(0, chatMessages.length - 500); return res.status(201).json({ message }); });
+app.get("/api/chat/messages", async (req, res) => {
+  const after = Number(req.query.after || 0);
+  try {
+    if (dbReady()) {
+      const rows = await dbRequest("chat_messages", `?select=id,player_id,display_name,message_text,created_at&created_at=gt.${Math.max(0, after)}&order=created_at.desc&limit=100`) as any[];
+      return res.json({ messages: rows.reverse().map(r => ({ id: r.id, playerId: r.player_id, displayName: r.display_name, text: r.message_text, createdAt: Number(r.created_at) })) });
+    }
+    return res.json({ messages: chatMessages.filter(m => m.createdAt > after).slice(-100) });
+  } catch { return res.status(503).json({ error: "Chat database is temporarily unavailable." }); }
+});
+app.post("/api/chat/messages", async (req, res) => {
+  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : "";
+  const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
+  const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0,1000) : "";
+  if (!playerId || !displayName || !text) return res.status(400).json({ error: "Name and message are required." });
+  const message: ChatMessage = { id: randomBytes(12).toString("hex"), playerId, displayName, text, createdAt: Date.now() };
+  try {
+    if (dbReady()) await dbRequest("chat_messages", "", "POST", { id: message.id, player_id: playerId, display_name: displayName, message_text: text, created_at: message.createdAt });
+    else { chatMessages.push(message); if (chatMessages.length > 500) chatMessages.splice(0, chatMessages.length - 500); }
+    return res.status(201).json({ message });
+  } catch { return res.status(503).json({ error: "Message could not be saved. Check Supabase configuration." }); }
+});
 
 app.post("/api/uploads/image", async (req, res) => {
   const supabaseUrl = process.env.SUPABASE_URL?.trim().replace(/\/$/, "");
@@ -160,11 +203,40 @@ app.post("/api/uploads/video", async (req, res) => {
   } catch { return res.status(502).json({ error: "Could not reach video storage." }); }
 });
 
-app.get("/api/posts", (_req, res) => res.json({ posts: [...feedPosts].reverse().slice(0,100) }));
-app.post("/api/posts", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : ""; const caption = typeof req.body?.caption === "string" ? req.body.caption.trim().slice(0,500) : ""; const imageUrl = typeof req.body?.imageUrl === "string" ? req.body.imageUrl.trim().slice(0,2000) : ""; if (!playerId || !displayName || (!caption && !imageUrl)) return res.status(400).json({ error: "Name and a caption or image URL are required." }); if (imageUrl && !imageUrl.startsWith("https://")) return res.status(400).json({ error: "Image URL must start with https://." }); const post: FeedPost = { id: randomBytes(12).toString("hex"), playerId, displayName, caption, imageUrl, createdAt: Date.now(), likes: [], comments: [] }; feedPosts.push(post); if (feedPosts.length > 200) feedPosts.shift(); return res.status(201).json({ post }); });
+app.get("/api/posts", async (_req, res) => {
+  try {
+    if (dbReady()) {
+      const rows = await dbRequest("feed_posts", "?select=*&order=created_at.desc&limit=100") as any[];
+      return res.json({ posts: rows.map(r => ({ id:r.id, playerId:r.player_id, displayName:r.display_name, caption:r.caption || "", imageUrl:r.image_url || "", createdAt:Number(r.created_at), likes:Array.isArray(r.likes)?r.likes:[], comments:Array.isArray(r.comments)?r.comments:[] })) });
+    }
+    return res.json({ posts: [...feedPosts].reverse().slice(0,100) });
+  } catch { return res.status(503).json({ error: "Posts database is temporarily unavailable." }); }
+});
+app.post("/api/posts", async (req, res) => {
+  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : "";
+  const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
+  const caption = typeof req.body?.caption === "string" ? req.body.caption.trim().slice(0,500) : "";
+  const imageUrl = typeof req.body?.imageUrl === "string" ? req.body.imageUrl.trim().slice(0,2000) : "";
+  if (!playerId || !displayName || (!caption && !imageUrl)) return res.status(400).json({ error: "Name and a caption or image URL are required." });
+  if (imageUrl && !imageUrl.startsWith("https://")) return res.status(400).json({ error: "Image URL must start with https://." });
+  const post: FeedPost = { id: randomBytes(12).toString("hex"), playerId, displayName, caption, imageUrl, createdAt: Date.now(), likes: [], comments: [] };
+  try {
+    if (dbReady()) await dbRequest("feed_posts", "", "POST", { id:post.id, player_id:playerId, display_name:displayName, caption, image_url:imageUrl, created_at:post.createdAt, likes:[], comments:[] });
+    else { feedPosts.push(post); if (feedPosts.length > 200) feedPosts.shift(); }
+    return res.status(201).json({ post });
+  } catch { return res.status(503).json({ error: "Post could not be saved. Check Supabase configuration." }); }
+});
 app.post("/api/posts/:postId/like", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const post = feedPosts.find(p => p.id === req.params.postId); if (!post || !playerId) return res.status(!post ? 404 : 400).json({ error: !post ? "Post not found." : "Player ID required." }); post.likes = post.likes.includes(playerId) ? post.likes.filter(id => id !== playerId) : [...post.likes, playerId]; return res.json({ post }); });
 app.post("/api/posts/:postId/comments", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : ""; const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0,300) : ""; const post = feedPosts.find(p => p.id === req.params.postId); if (!post || !playerId || !displayName || !text) return res.status(!post ? 404 : 400).json({ error: !post ? "Post not found." : "Name and comment required." }); post.comments.push({ id: randomBytes(12).toString("hex"), playerId, displayName, text, createdAt: Date.now() }); if (post.comments.length > 100) post.comments.shift(); return res.status(201).json({ post }); });
-app.get("/api/reels", (_req, res) => res.json({ reels: [...reels].reverse().slice(0,100) }));
+app.get("/api/reels", async (_req, res) => {
+  try {
+    if (dbReady()) {
+      const rows = await dbRequest("reels", "?select=*&order=created_at.desc&limit=100") as any[];
+      return res.json({ reels: rows.map(r => ({ id:r.id, playerId:r.player_id, displayName:r.display_name, caption:r.caption || "", videoUrl:r.video_url, createdAt:Number(r.created_at), likes:Array.isArray(r.likes)?r.likes:[] })) });
+    }
+    return res.json({ reels: [...reels].reverse().slice(0,100) });
+  } catch { return res.status(503).json({ error: "Reels database is temporarily unavailable." }); }
+});
 app.post("/api/reels", (req, res) => {
   const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.trim().slice(0,64) : "";
   const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
@@ -174,8 +246,11 @@ app.post("/api/reels", (req, res) => {
   try { const url = new URL(videoUrl); if (url.protocol !== "https:") throw new Error("https required"); }
   catch { return res.status(400).json({ error: "Video URL must be a valid https:// link." }); }
   const reel: Reel = { id: randomBytes(12).toString("hex"), playerId, displayName, caption, videoUrl, createdAt: Date.now(), likes: [] };
-  reels.push(reel); if (reels.length > 200) reels.shift();
-  return res.status(201).json({ reel });
+  try {
+    if (dbReady()) await dbRequest("reels", "", "POST", { id:reel.id, player_id:playerId, display_name:displayName, caption, video_url:videoUrl, created_at:reel.createdAt, likes:[] });
+    else { reels.push(reel); if (reels.length > 200) reels.shift(); }
+    return res.status(201).json({ reel });
+  } catch { return res.status(503).json({ error: "Reel could not be saved. Check Supabase configuration." }); }
 });
 app.post("/api/reels/:reelId/like", (req, res) => {
   const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.trim().slice(0,64) : "";
