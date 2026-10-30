@@ -72,6 +72,8 @@ export default function LudoBoard() {
   useEffect(() => {
     if (!roomCode || !room) return;
     let active = true;
+    void api.heartbeatLudoRoom(roomCode).catch(() => {});
+    const heartbeatTimer = window.setInterval(() => { void api.heartbeatLudoRoom(roomCode).catch(() => {}); }, 10000);
     const poll = async () => {
       try {
         const result = await api.getLudoRoom(roomCode);
