@@ -6,6 +6,7 @@ import ChatView from "../ChatView";
 import ReelsView from "../ReelsView";
 import PostsView from "../PostsView";
 import MembershipModal from "../MembershipModal";
+import AuthPanel from "../AuthPanel";
 import "./style.css";
 import "./ludo.css";
 
@@ -28,6 +29,7 @@ function App() {
         <p>PLAY · CONNECT · SHARE</p>
       </header>
       <main>
+        <AuthPanel />
         <section className="hero">
           <span className="eyebrow">YOUR SOCIAL GAMING SPACE</span>
           <h1>Game. Friends. Fun.</h1>
