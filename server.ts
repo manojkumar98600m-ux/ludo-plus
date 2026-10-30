@@ -61,7 +61,7 @@ async function verifySocialSession(req: any, res: any, next: any) {
       res.status(401).json({ error: "Please sign in again." });
       return;
     }
-    req.verifiedSocialUserId = account.id;
+    (req as any).verifiedSocialUserId = account.id;
     next();
   } catch {
     res.status(503).json({ error: "Could not verify login right now. Please try again." });
@@ -357,7 +357,7 @@ app.get("/api/posts", async (_req, res) => {
   } catch { return res.status(503).json({ error: "Posts database is temporarily unavailable." }); }
 });
 app.post("/api/posts", verifySocialSession, async (req, res) => {
-  const playerId = String(req.verifiedSocialUserId || "");
+  const playerId = String((req as any).verifiedSocialUserId || "");
   const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
   const caption = typeof req.body?.caption === "string" ? req.body.caption.trim().slice(0,500) : "";
   const imageUrl = typeof req.body?.imageUrl === "string" ? req.body.imageUrl.trim().slice(0,2000) : "";
@@ -371,7 +371,7 @@ app.post("/api/posts", verifySocialSession, async (req, res) => {
   } catch { return res.status(503).json({ error: "Post could not be saved. Check Supabase configuration." }); }
 });
 app.post("/api/posts/:postId/like", verifySocialSession, async (req, res) => {
-  const playerId = String(req.verifiedSocialUserId || "");
+  const playerId = String((req as any).verifiedSocialUserId || "");
   if (!playerId) return res.status(400).json({ error: "Player ID required." });
   try {
     if (dbReady()) {
@@ -391,7 +391,7 @@ app.post("/api/posts/:postId/like", verifySocialSession, async (req, res) => {
   } catch { return res.status(503).json({ error: "Post like could not be saved." }); }
 });
 app.post("/api/posts/:postId/comments", verifySocialSession, async (req, res) => {
-  const playerId = String(req.verifiedSocialUserId || "");
+  const playerId = String((req as any).verifiedSocialUserId || "");
   const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
   const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0,300) : "";
   if (!playerId || !displayName || !text) return res.status(400).json({ error: "Name and comment required." });
