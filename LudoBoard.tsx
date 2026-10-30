@@ -125,8 +125,9 @@ export default function LudoBoard() {
     setMessage(movable ? `${players[turn].name}: गोटी चुनें` : `${players[turn].name} को चाल नहीं मिली`);
     if (!movable) window.setTimeout(() => {
       setDice(null);
-      setTurn(current => (current + 1) % players.length);
-      setMessage(`${players[(turn + 1) % players.length].name} की बारी है`);
+      const nextTurn = room ? (turn + 1) % room.players.length : (turn + 1) % players.length;
+      setTurn(nextTurn);
+      setMessage(`${players[nextTurn].name} की बारी है`);
     }, 650);
   }
 
@@ -150,7 +151,7 @@ export default function LudoBoard() {
       setWinner(turn); setMessage(`${players[turn].name} जीत गया! 🎉`);
     } else if (dice === 6) setMessage(`${players[turn].name} को 6 मिला — फिर से पासा फेंकें`);
     else {
-      const nextTurn = (turn + 1) % 4;
+      const nextTurn = room ? (turn + 1) % room.players.length : (turn + 1) % 4;
       setTurn(nextTurn); setMessage(`${players[nextTurn].name} की बारी है`);
     }
     setDice(null);
