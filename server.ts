@@ -220,7 +220,8 @@ app.post("/api/ludo/rooms/:roomCode/roll", async (req, res) => {
     const room = await loadRoom(code);
     if (!room) return res.status(404).json({ error: "Room not found." });
     const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";
-    if (room.status !== "playing") return res.status(409).json({ error: "Host must start the game after everyone is ready." });\n    if (room.players.length < 2) return res.status(409).json({ error: "At least 2 players are required to start." });
+    if (room.status !== "playing") return res.status(409).json({ error: "Host must start the game after everyone is ready." });
+    if (room.players.length < 2) return res.status(409).json({ error: "At least 2 players are required to start." });
     if (!room.players[room.game.turn] || room.players[room.game.turn].playerId !== playerId) return res.status(403).json({ error: "It is not your turn." });
     if (room.game.winner !== null || room.game.dice !== null) return res.status(409).json({ error: "Dice is already rolled or game is over.", room: publicRoom(room) });
     room.game = { ...room.game, dice: randomInt(1, 7), revision: room.game.revision + 1, updatedAt: Date.now() };
