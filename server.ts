@@ -70,68 +70,58 @@ app.get("/api/payment/merchant-config", (_req, res) => {
 });
 
 // In-memory lobby API. A persistent database and realtime transport are still required for production play.
-app.post("/api/ludo/rooms", (req, res) => {
-  cleanExpiredRooms();
+async function loadRoom(code: string): Promise<Room | undefined> {
+  if (!dbReady()) return rooms.get(code);
+  const rows = await dbRequest("ludo_rooms", "?room_code=eq." + encodeURIComponent(code) + "&select=room_code,host_id,status,players,created_at,game&limit=1") as any[];
+  const row = rows[0]; if (!row) return undefined;
+  return { code: row.room_code, hostId: row.host_id, status: row.status, players: row.players, createdAt: Number(row.created_at), game: row.game };
+}
+async function saveRoom(room: Room, insert = false) {
+  if (!dbReady()) { rooms.set(room.code, room); return; }
+  const row = { room_code: room.code, host_id: room.hostId, status: room.status, players: room.players, created_at: room.createdAt, game: room.game };
+  await dbRequest("ludo_rooms", insert ? "" : "?room_code=eq." + encodeURIComponent(room.code), insert ? "POST" : "PATCH", row);
+}
+app.post("/api/ludo/rooms", async (req, res) => {
   const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0, 24) : "";
   const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.trim().slice(0, 64) : "";
   if (!displayName || !playerId) return res.status(400).json({ error: "displayName and playerId are required." });
-  const code = makeRoomCode();
-  const room: Room = {
-    code, hostId: playerId, status: "waiting", createdAt: Date.now(),
-    players: [{ playerId, displayName, color: COLORS[0], joinedAt: Date.now() }],
-    game: { positions: Array.from({ length: 4 }, () => [-1, -1, -1, -1]), turn: 0, dice: null, winner: null, revision: 0, updatedAt: Date.now() }
-  };
-  rooms.set(code, room);
-  return res.status(201).json({ room: publicRoom(room), host: true });
+  const now = Date.now(); const code = makeRoomCode();
+  const room: Room = { code, hostId: playerId, status: "waiting", createdAt: now, players: [{ playerId, displayName, color: COLORS[0], joinedAt: now }], game: { positions: Array.from({ length: 4 }, () => [-1, -1, -1, -1]), turn: 0, dice: null, winner: null, revision: 0, updatedAt: now } };
+  try { await saveRoom(room, true); return res.status(201).json({ room: publicRoom(room), host: true }); }
+  catch { return res.status(503).json({ error: "Room save failed. Check ludo_rooms Supabase table and backend keys." }); }
 });
-
-app.post("/api/ludo/rooms/:roomCode/join", (req, res) => {
-  cleanExpiredRooms();
+app.post("/api/ludo/rooms/:roomCode/join", async (req, res) => {
   const code = String(req.params.roomCode || "").trim().toUpperCase();
   const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0, 24) : "";
   const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.trim().slice(0, 64) : "";
   if (!displayName || !playerId) return res.status(400).json({ error: "displayName and playerId are required." });
-  const room = rooms.get(code);
-  if (!room) return res.status(404).json({ error: "Room not found or server restarted." });
-  if (room.players.some(player => player.playerId === playerId)) return res.json({ room: publicRoom(room), host: room.hostId === playerId });
-  if (room.players.length >= 4) return res.status(409).json({ error: "Room is full." });
-  if (room.status !== "waiting") return res.status(409).json({ error: "Game has already started." });
-  room.players.push({ playerId, displayName, color: COLORS[room.players.length], joinedAt: Date.now() });
-  return res.status(200).json({ room: publicRoom(room), host: false });
+  try { const room = await loadRoom(code); if (!room) return res.status(404).json({ error: "Room not found." });
+    if (room.players.some(p => p.playerId === playerId)) return res.json({ room: publicRoom(room), host: room.hostId === playerId });
+    if (room.players.length >= 4) return res.status(409).json({ error: "Room is full." });
+    if (room.status !== "waiting") return res.status(409).json({ error: "Game has already started." });
+    room.players.push({ playerId, displayName, color: COLORS[room.players.length], joinedAt: Date.now() }); await saveRoom(room);
+    return res.status(200).json({ room: publicRoom(room), host: false });
+  } catch { return res.status(503).json({ error: "Room database is temporarily unavailable." }); }
 });
-
-app.get("/api/ludo/rooms/:roomCode", (req, res) => {
-  cleanExpiredRooms();
-  const room = rooms.get(String(req.params.roomCode || "").trim().toUpperCase());
-  if (!room) return res.status(404).json({ error: "Room not found or server restarted." });
-  return res.json({ room: publicRoom(room) });
+app.get("/api/ludo/rooms/:roomCode", async (req, res) => {
+  try { const room = await loadRoom(String(req.params.roomCode || "").trim().toUpperCase());
+    if (!room) return res.status(404).json({ error: "Room not found." }); return res.json({ room: publicRoom(room) });
+  } catch { return res.status(503).json({ error: "Room database is temporarily unavailable." }); }
 });
-
-app.put("/api/ludo/rooms/:roomCode/state", (req, res) => {
-  cleanExpiredRooms();
-  const room = rooms.get(String(req.params.roomCode || "").trim().toUpperCase());
-  if (!room) return res.status(404).json({ error: "Room not found or server restarted." });
-  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";
-  if (!room.players.some(player => player.playerId === playerId)) return res.status(403).json({ error: "You are not a member of this room." });
-  const positions = req.body?.positions;
-  const turn = req.body?.turn;
-  const dice = req.body?.dice;
-  const winner = req.body?.winner;
-  if (!Array.isArray(positions) || positions.length !== 4 || positions.some((row: unknown) => !Array.isArray(row) || row.length !== 4 || row.some((value: unknown) => !Number.isInteger(value) || (value as number) < -1 || (value as number) > 57))) {
-    return res.status(400).json({ error: "Invalid token positions." });
-  }
-  if (!Number.isInteger(turn) || turn < 0 || turn > 3 || !(dice === null || (Number.isInteger(dice) && dice >= 1 && dice <= 6)) || !(winner === null || (Number.isInteger(winner) && winner >= 0 && winner <= 3))) {
-    return res.status(400).json({ error: "Invalid game turn, dice or winner." });
-  }
-  const expectedRevision = Number(req.body?.revision);
-  if (Number.isInteger(expectedRevision) && expectedRevision !== room.game.revision) {
-    return res.status(409).json({ error: "Game state changed. Refresh the room and try again.", room: publicRoom(room) });
-  }
-  room.game = { positions, turn, dice, winner, revision: room.game.revision + 1, updatedAt: Date.now() };
-  room.status = "playing";
-  return res.json({ room: publicRoom(room) });
+app.put("/api/ludo/rooms/:roomCode/state", async (req, res) => {
+  try { const room = await loadRoom(String(req.params.roomCode || "").trim().toUpperCase());
+    if (!room) return res.status(404).json({ error: "Room not found." });
+    const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";
+    if (!room.players.some(p => p.playerId === playerId)) return res.status(403).json({ error: "You are not a member of this room." });
+    const positions = req.body?.positions, turn = req.body?.turn, dice = req.body?.dice, winner = req.body?.winner;
+    if (!Array.isArray(positions) || positions.length !== 4 || positions.some((row: unknown) => !Array.isArray(row) || row.length !== 4 || row.some((v: unknown) => !Number.isInteger(v) || (v as number) < -1 || (v as number) > 57))) return res.status(400).json({ error: "Invalid token positions." });
+    if (!Number.isInteger(turn) || turn < 0 || turn > 3 || !(dice === null || (Number.isInteger(dice) && dice >= 1 && dice <= 6)) || !(winner === null || (Number.isInteger(winner) && winner >= 0 && winner <= 3))) return res.status(400).json({ error: "Invalid game turn, dice or winner." });
+    const expectedRevision = Number(req.body?.revision);
+    if (Number.isInteger(expectedRevision) && expectedRevision !== room.game.revision) return res.status(409).json({ error: "Game state changed. Refresh the room and try again.", room: publicRoom(room) });
+    room.game = { positions, turn, dice, winner, revision: room.game.revision + 1, updatedAt: Date.now() }; room.status = "playing"; await saveRoom(room);
+    return res.json({ room: publicRoom(room) });
+  } catch { return res.status(503).json({ error: "Game state could not be saved. Check Supabase configuration." }); }
 });
-
 app.get("/api/chat/messages", async (req, res) => {
   const after = Number(req.query.after || 0);
   try {
