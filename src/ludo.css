@@ -16,3 +16,23 @@
 button.board-piece{padding:0;appearance:none;min-width:0;cursor:pointer;flex:0 0 auto}
 button.board-piece:disabled{opacity:1;cursor:default}
 button.board-piece-selectable{outline:2px solid #fff;outline-offset:1px;box-shadow:0 0 0 2px #3b245b,0 0 7px #fff}
+
+
+/* Premium classic Ludo board finish: bold black grid, bright quadrants and raised tokens. */
+.ludo15{width:min(100%,512px);gap:2px;padding:3px;background:#111;border:2px solid #111;border-radius:4px;box-shadow:0 8px 24px #0003;overflow:visible}
+.ludo-cell{position:relative;border:1px solid #171717;font-size:clamp(5px,1.7vw,10px)}
+.empty-cell{background:#fff}
+.track-cell{background:#fff;border-color:#171717;color:#777}
+.safe-cell{background:#fff;color:#777}
+.yard-cell{border:1px solid #111}
+.yard-cell.red{background:#f20d1c}.yard-cell.green{background:#079b50}.yard-cell.yellow{background:#ffe000}.yard-cell.blue{background:#0643bd}
+.yard-cell.yard-base{background:#fff!important;border:2px solid #171717;border-radius:0;box-shadow:inset 0 0 0 1px #bbb}
+.lane-cell.red{background:#f20d1c}.lane-cell.green{background:#079b50}.lane-cell.yellow{background:#ffe000}.lane-cell.blue{background:#0643bd}
+.finish-cell{background:conic-gradient(#f20d1c 0 25%,#0643bd 0 50%,#ffe000 0 75%,#079b50 0);color:#fff;border-color:#171717}
+.finish-cell.finish-red{background:#f20d1c}.finish-cell.finish-green{background:#079b50}.finish-cell.finish-yellow{background:#ffe000}.finish-cell.finish-blue{background:#0643bd}
+.board-pieces{gap:0;flex-direction:row}
+.board-piece{width:clamp(5px,1.7vw,11px);height:clamp(5px,1.7vw,11px);border:1px solid #fff;box-shadow:0 1px 2px #0009}
+.board-piece.red{background:radial-gradient(circle at 30% 25%,#fff 0 10%,#ff626a 18%,#e60012 65%,#85000a 100%)}
+.board-piece.green{background:radial-gradient(circle at 30% 25%,#fff 0 10%,#69ef9e 18%,#009b4a 65%,#00572a 100%)}
+.board-piece.yellow{background:radial-gradient(circle at 30% 25%,#fff 0 10%,#fff79a 18%,#ffdc00 65%,#a87a00 100%)}
+.board-piece.blue{background:radial-gradient(circle at 30% 25%,#fff 0 10%,#75b9ff 18%,#0752dc 65%,#05246c 100%)}
