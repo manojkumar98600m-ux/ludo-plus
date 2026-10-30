@@ -71,10 +71,19 @@ app.get("/api/payment/merchant-config", (_req, res) => {
 
 // In-memory lobby API. A persistent database and realtime transport are still required for production play.
 async function loadRoom(code: string): Promise<Room | undefined> {
-  if (!dbReady()) return rooms.get(code);
+  if (!dbReady()) {
+    const room = rooms.get(code);
+    if (room && room.status === "waiting" && Date.now() - room.createdAt > 24 * 60 * 60 * 1000) { rooms.delete(code); return undefined; }
+    return room;
+  }
   const rows = await dbRequest("ludo_rooms", "?room_code=eq." + encodeURIComponent(code) + "&select=room_code,host_id,status,players,created_at,game&limit=1") as any[];
   const row = rows[0]; if (!row) return undefined;
-  return { code: row.room_code, hostId: row.host_id, status: row.status, players: row.players, createdAt: Number(row.created_at), game: row.game };
+  const room: Room = { code: row.room_code, hostId: row.host_id, status: row.status, players: row.players, createdAt: Number(row.created_at), game: row.game };
+  if (room.status === "waiting" && Date.now() - room.createdAt > 24 * 60 * 60 * 1000) {
+    await dbRequest("ludo_rooms", "?room_code=eq." + encodeURIComponent(code), "DELETE");
+    return undefined;
+  }
+  return room;
 }
 async function saveRoom(room: Room, insert = false) {
   if (!dbReady()) { rooms.set(room.code, room); return; }
