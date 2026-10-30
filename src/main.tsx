@@ -1,9 +1,23 @@
-import React from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import LudoBoard from "../LudoBoard";
+import DatingView from "../DatingView";
+import ChatView from "../ChatView";
+import ReelsView from "../ReelsView";
+import MembershipModal from "../MembershipModal";
 import "./style.css";
 
+type Tab = "game" | "dating" | "reels" | "chat";
+
 function App() {
+  const [tab, setTab] = useState<Tab>("game");
+  const [membershipOpen, setMembershipOpen] = useState(false);
+  const tabs: { id: Tab; label: string; icon: string }[] = [
+    { id: "game", label: "Game", icon: "🎲" },
+    { id: "dating", label: "Dating", icon: "💜" },
+    { id: "reels", label: "Reels", icon: "🎬" },
+    { id: "chat", label: "Chat", icon: "💬" }
+  ];
   return (
     <div className="app">
       <header>
@@ -12,22 +26,28 @@ function App() {
       </header>
       <main>
         <section className="hero">
-          <span className="eyebrow">WELCOME TO LUDO PLUS</span>
+          <span className="eyebrow">YOUR SOCIAL GAMING SPACE</span>
           <h1>Game. Friends. Fun.</h1>
-          <p>Your place to play Ludo and connect with friends.</p>
+          <p>Play, discover and connect — all in one place.</p>
+          <button className="vip-btn" onClick={() => setMembershipOpen(true)}>👑 Get VIP · ₹50 / 90 days</button>
         </section>
-        <LudoBoard />
-        <div className="grid">
-          <section className="tile"><div className="emoji">❤️</div><h2>Dating & Friends</h2><p>Profile discovery preview. Secure accounts, age checks and matching services are not connected yet.</p></section>
-          <section className="tile"><div className="emoji">🎬</div><h2>Reels & Posts</h2><p>Social feed preview. Uploads, likes and comments need backend storage.</p></section>
-          <section className="tile"><div className="emoji">💬</div><h2>Chat & Calls</h2><p>Messaging and voice/video calls need real-time service integration.</p></section>
-        </div>
+        <nav className="tabbar" aria-label="Main sections">
+          {tabs.map(item => <button key={item.id} className={tab === item.id ? "tab active" : "tab"} onClick={() => setTab(item.id)} aria-current={tab === item.id ? "page" : undefined}>
+            <span>{item.icon}</span>{item.label}
+          </button>)}
+        </nav>
+        {tab === "game" && <><LudoBoard /><section className="notice"><b>Online play coming after server setup</b><p>Dice demo abhi isi device par chalta hai. Live rooms, friends ke saath turns aur room codes abhi connected nahi hain.</p></section></>}
+        {tab === "dating" && <DatingView />}
+        {tab === "reels" && <ReelsView />}
+        {tab === "chat" && <ChatView />}
         <section className="membership">
-          <div><span className="eyebrow">LUDO PLUS PREMIUM</span><h2>90 days membership</h2><p>₹50 total · PhonePe setup pending — no payment will be marked successful until a real merchant gateway is connected.</p></div>
+          <div><span className="eyebrow">LUDO PLUS PREMIUM</span><h2>90 days membership</h2><p>₹50 total · PhonePe merchant setup pending. Payment is disabled until real gateway verification is implemented.</p><button className="secondary-btn" onClick={() => setMembershipOpen(true)}>View membership</button></div>
           <span className="crown">👑</span>
         </section>
+        <section className="safety-note"><b>Safety & privacy</b><p>Dating profiles shown here are sample previews, not real people. Real dating launch needs verified 18+ access, reporting, blocking and moderation.</p></section>
       </main>
-      <footer>© 2026 LUDO PLUS</footer>
+      <footer>© 2026 LUDO PLUS · Built for play and connection</footer>
+      {membershipOpen && <MembershipModal onClose={() => setMembershipOpen(false)} />}
     </div>
   );
 }
