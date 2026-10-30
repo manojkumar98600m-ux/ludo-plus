@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { api, type LudoRoom } from "./api";
 
 type Player = { name: string; color: string; start: number; css: string };
 const players: Player[] = [
@@ -39,7 +40,10 @@ export default function LudoBoard() {
   const [winner, setWinner] = useState<number | null>(null);
   const [roomCode, setRoomCode] = useState("");
   const [joinCode, setJoinCode] = useState("");
-  const [roomMessage, setRoomMessage] = useState("Private room अभी local preview है; live invite के लिए server setup बाकी है।");
+  const [roomMessage, setRoomMessage] = useState("Server URL configure होने पर private rooms काम करेंगे।");
+  const [displayName, setDisplayName] = useState("Player");
+  const [room, setRoom] = useState<LudoRoom | null>(null);
+  const [roomBusy, setRoomBusy] = useState(false);
 
   function rollDice() {
     if (dice !== null || winner !== null) return;
@@ -125,8 +129,9 @@ export default function LudoBoard() {
     <section className="private-room">
       <h3>🔐 Private Ludo Room</h3>
       <p className="muted small">Room code preview — अभी दूसरे फोन से live join नहीं होगा।</p>
-      <div className="room-actions"><button className="secondary-btn" onClick={() => { const code = Math.random().toString(36).slice(2, 8).toUpperCase(); setRoomCode(code); setRoomMessage("Room code बन गया। Live multiplayer server अभी जोड़ना बाकी है।"); }}>Create room code</button>{roomCode && <strong className="room-code">{roomCode}</strong>}</div>
-      <div className="room-actions"><input aria-label="Enter room code" placeholder="Enter room code" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 8))}/><button className="secondary-btn" onClick={() => setRoomMessage(joinCode.trim() ? `Code ${joinCode.trim()} local preview में मिला नहीं — live server बाकी है।` : "पहले room code डालें।")}>Join</button></div>
+      <div className="room-actions"><input aria-label="Your player name" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value.slice(0,24))}/><button className="secondary-btn" disabled={roomBusy || !displayName.trim()} onClick={async () => { setRoomBusy(true); try { const result = await api.createLudoRoom(displayName.trim()); setRoom(result.room); setRoomCode(result.room.code); setRoomMessage("Room server पर बन गया। Code अपने दोस्तों को भेजें।"); } catch (error) { setRoomMessage(error instanceof Error ? error.message : "Room create नहीं हुआ। API server URL check करें।"); } finally { setRoomBusy(false); } }}>{roomBusy ? "Please wait…" : "Create room"}</button>{roomCode && <strong className="room-code">{roomCode}</strong>}</div>
+      <div className="room-actions"><input aria-label="Enter room code" placeholder="Enter room code" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 8))}/><button className="secondary-btn" disabled={roomBusy || !joinCode.trim() || !displayName.trim()} onClick={async () => { setRoomBusy(true); try { const result = await api.joinLudoRoom(joinCode.trim(), displayName.trim()); setRoom(result.room); setRoomCode(result.room.code); setRoomMessage(`Room join हो गया: ${result.room.players.length}/4 players`); } catch (error) { setRoomMessage(error instanceof Error ? error.message : "Room join नहीं हुआ। API server URL check करें।"); } finally { setRoomBusy(false); } }}>Join room</button></div>
+      {room && <div className="room-members"><b>Room {room.code} · {room.players.length}/4</b>{room.players.map(player => <span key={player.playerId}>{player.displayName} · {player.color}</span>)}</div>}
       <p className="muted small">{roomMessage}</p>
     </section>
   </section>;
