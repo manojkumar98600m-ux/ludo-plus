@@ -15,6 +15,8 @@ type ChatMessage = { id: string; playerId: string; displayName: string; text: st
 const chatMessages: ChatMessage[] = [];
 type FeedPost = { id: string; playerId: string; displayName: string; caption: string; imageUrl: string; createdAt: number; likes: string[]; comments: { id: string; playerId: string; displayName: string; text: string; createdAt: number }[] };
 const feedPosts: FeedPost[] = [];
+type Reel = { id: string; playerId: string; displayName: string; caption: string; videoUrl: string; createdAt: number; likes: string[] };
+const reels: Reel[] = [];
 const COLORS = ["red", "green", "yellow", "blue"];
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 
@@ -138,6 +140,25 @@ app.get("/api/posts", (_req, res) => res.json({ posts: [...feedPosts].reverse().
 app.post("/api/posts", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : ""; const caption = typeof req.body?.caption === "string" ? req.body.caption.trim().slice(0,500) : ""; const imageUrl = typeof req.body?.imageUrl === "string" ? req.body.imageUrl.trim().slice(0,2000) : ""; if (!playerId || !displayName || (!caption && !imageUrl)) return res.status(400).json({ error: "Name and a caption or image URL are required." }); if (imageUrl && !imageUrl.startsWith("https://")) return res.status(400).json({ error: "Image URL must start with https://." }); const post: FeedPost = { id: randomBytes(12).toString("hex"), playerId, displayName, caption, imageUrl, createdAt: Date.now(), likes: [], comments: [] }; feedPosts.push(post); if (feedPosts.length > 200) feedPosts.shift(); return res.status(201).json({ post }); });
 app.post("/api/posts/:postId/like", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const post = feedPosts.find(p => p.id === req.params.postId); if (!post || !playerId) return res.status(!post ? 404 : 400).json({ error: !post ? "Post not found." : "Player ID required." }); post.likes = post.likes.includes(playerId) ? post.likes.filter(id => id !== playerId) : [...post.likes, playerId]; return res.json({ post }); });
 app.post("/api/posts/:postId/comments", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : ""; const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0,300) : ""; const post = feedPosts.find(p => p.id === req.params.postId); if (!post || !playerId || !displayName || !text) return res.status(!post ? 404 : 400).json({ error: !post ? "Post not found." : "Name and comment required." }); post.comments.push({ id: randomBytes(12).toString("hex"), playerId, displayName, text, createdAt: Date.now() }); if (post.comments.length > 100) post.comments.shift(); return res.status(201).json({ post }); });
-app.get("/api/reels", (_req, res) => res.json({ reels: [] }));
+app.get("/api/reels", (_req, res) => res.json({ reels: [...reels].reverse().slice(0,100) }));
+app.post("/api/reels", (req, res) => {
+  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.trim().slice(0,64) : "";
+  const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
+  const caption = typeof req.body?.caption === "string" ? req.body.caption.trim().slice(0,300) : "";
+  const videoUrl = typeof req.body?.videoUrl === "string" ? req.body.videoUrl.trim().slice(0,2000) : "";
+  if (!playerId || !displayName || !videoUrl) return res.status(400).json({ error: "Name and video URL are required." });
+  try { const url = new URL(videoUrl); if (url.protocol !== "https:") throw new Error("https required"); }
+  catch { return res.status(400).json({ error: "Video URL must be a valid https:// link." }); }
+  const reel: Reel = { id: randomBytes(12).toString("hex"), playerId, displayName, caption, videoUrl, createdAt: Date.now(), likes: [] };
+  reels.push(reel); if (reels.length > 200) reels.shift();
+  return res.status(201).json({ reel });
+});
+app.post("/api/reels/:reelId/like", (req, res) => {
+  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.trim().slice(0,64) : "";
+  const reel = reels.find(item => item.id === req.params.reelId);
+  if (!reel || !playerId) return res.status(!reel ? 404 : 400).json({ error: !reel ? "Reel not found." : "Player ID required." });
+  reel.likes = reel.likes.includes(playerId) ? reel.likes.filter(id => id !== playerId) : [...reel.likes, playerId];
+  return res.json({ reel });
+});
 
 app.listen(port, "0.0.0.0", () => console.log(`LUDO PLUS API listening on ${port}`));
