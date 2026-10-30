@@ -111,6 +111,7 @@ app.get("/api/ludo/rooms/:roomCode", async (req, res) => {
 function samePositions(a: number[][], b: unknown): boolean {
   return Array.isArray(b) && b.length === 4 && a.every((row, i) => Array.isArray(b[i]) && row.length === 4 && row.every((v, j) => v === b[i][j]));
 }
+function nextRoomTurn(room: Room, current: number) { return (current + 1) % Math.max(2, room.players.length); }
 function validMoveTransition(room: Room, positions: number[][], turn: number, dice: number | null, winner: number | null): boolean {
   const old = room.game;
   if (old.winner !== null) return false;
@@ -123,7 +124,7 @@ function validMoveTransition(room: Room, positions: number[][], turn: number, di
   const roll = old.dice;
   if (changed.length === 0) {
     const canMove = old.positions[old.turn].some(pos => pos === -1 ? roll === 6 : pos >= 0 && pos + roll <= 57);
-    return !canMove && turn === (old.turn + 1) % 4 && winner === null;
+    return !canMove && turn === nextRoomTurn(room, old.turn) && winner === null;
   }
   if (changed.some(x => x.player !== old.turn)) return false;
   if (changed.length !== 1) return false;
@@ -147,7 +148,7 @@ function validMoveTransition(room: Room, positions: number[][], turn: number, di
   if (!samePositions(expectedBoard, positions)) return false;
   const won = positions[old.turn].every(pos => pos === 57);
   if ((winner === old.turn) !== won) return false;
-  const expectedTurn = won || roll === 6 ? old.turn : (old.turn + 1) % 4;
+  const expectedTurn = won || roll === 6 ? old.turn : nextRoomTurn(room, old.turn);
   return turn === expectedTurn;
 }
 
@@ -157,6 +158,7 @@ app.post("/api/ludo/rooms/:roomCode/roll", async (req, res) => {
     const room = await loadRoom(code);
     if (!room) return res.status(404).json({ error: "Room not found." });
     const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";
+    if (room.players.length < 2) return res.status(409).json({ error: "At least 2 players are required to start." });
     if (!room.players[room.game.turn] || room.players[room.game.turn].playerId !== playerId) return res.status(403).json({ error: "It is not your turn." });
     if (room.game.winner !== null || room.game.dice !== null) return res.status(409).json({ error: "Dice is already rolled or game is over.", room: publicRoom(room) });
     room.game = { ...room.game, dice: randomInt(1, 7), revision: room.game.revision + 1, updatedAt: Date.now() };
