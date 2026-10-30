@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ludo-plus-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
