@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, getPlayerId, type Reel } from "./api";
+import { getCurrentUser } from "./auth";
 
 function fileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -26,6 +27,7 @@ export default function ReelsView() {
   useEffect(() => { void refresh(); }, []);
 
   async function publish() {
+    if (!getCurrentUser()) { setError("Reel publish करने के लिए पहले login करें।"); return; }
     if (!videoFile && !videoUrl.trim()) { setError("Video file चुनें या direct video URL डालें।"); return; }
     setBusy(true); setError("");
     try {
@@ -49,6 +51,7 @@ export default function ReelsView() {
   }
 
   async function toggleLike(reel: Reel) {
+    if (!getCurrentUser()) { setError("Like करने के लिए पहले login करें।"); return; }
     try {
       const result = await api.toggleReelLike(reel.id);
       setReels(items => items.map(item => item.id === reel.id ? result.reel : item));
