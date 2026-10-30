@@ -49,6 +49,25 @@ export default function LudoBoard() {
   const signatureRef = useRef("");
 
   const gameSignature = JSON.stringify({ positions, turn, dice, winner });
+  useEffect(() => {
+    const savedCode = localStorage.getItem("ludo-plus-last-room");
+    if (!savedCode) return;
+    let active = true;
+    api.getLudoRoom(savedCode).then(({ room: savedRoom }) => {
+      if (!active || !savedRoom.players.some(player => player.playerId === getPlayerId())) {
+        if (active) localStorage.removeItem("ludo-plus-last-room");
+        return;
+      }
+      revisionRef.current = savedRoom.game.revision;
+      signatureRef.current = JSON.stringify({ positions: savedRoom.game.positions, turn: savedRoom.game.turn, dice: savedRoom.game.dice, winner: savedRoom.game.winner });
+      setRoom(savedRoom); setRoomCode(savedRoom.code);
+      setPositions(savedRoom.game.positions.map(row => [...row]));
+      setTurn(savedRoom.game.turn); setDice(savedRoom.game.dice); setWinner(savedRoom.game.winner);
+      setRoomMessage("पुराना Ludo room वापस जुड़ गया।");
+    }).catch(() => localStorage.removeItem("ludo-plus-last-room"));
+    return () => { active = false; };
+  }, []);
+
 
   useEffect(() => {
     if (!roomCode || !room) return;
@@ -230,9 +249,9 @@ export default function LudoBoard() {
     <section className="private-room">
       <h3>🔐 Private Ludo Room</h3>
       <p className="muted small">Room code से जुड़ें; game state लगभग हर 2 सेकंड में sync होगा।</p>
-      <div className="room-actions"><input aria-label="Your player name" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value.slice(0,24))}/><button className="secondary-btn" disabled={roomBusy || !displayName.trim()} onClick={async () => { setRoomBusy(true); try { const result = await api.createLudoRoom(displayName.trim()); setRoom(result.room); setRoomCode(result.room.code); revisionRef.current = result.room.game.revision; signatureRef.current = JSON.stringify({ positions: result.room.game.positions, turn: result.room.game.turn, dice: result.room.game.dice, winner: result.room.game.winner }); setPositions(result.room.game.positions.map(row => [...row])); setTurn(result.room.game.turn); setDice(result.room.game.dice); setWinner(result.room.game.winner); setRoomMessage("Room बन गया। Code अपने दोस्तों को भेजें।"); } catch (error) { setRoomMessage(error instanceof Error ? error.message : "Room create नहीं हुआ। API server URL check करें।"); } finally { setRoomBusy(false); } }}>{roomBusy ? "Please wait…" : "Create room"}</button>{roomCode && <><strong className="room-code">{roomCode}</strong><button className="secondary-btn" onClick={() => { void navigator.clipboard?.writeText(roomCode).then(() => setRoomMessage("Room code copied. Friends को भेजें।")).catch(() => setRoomMessage("Room code manually copy करें: "+roomCode)); }}>Copy code</button></>}</div>
+      <div className="room-actions"><input aria-label="Your player name" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value.slice(0,24))}/><button className="secondary-btn" disabled={roomBusy || !displayName.trim()} onClick={async () => { setRoomBusy(true); try { const result = await api.createLudoRoom(displayName.trim()); setRoom(result.room); setRoomCode(result.room.code); localStorage.setItem("ludo-plus-last-room", result.room.code); revisionRef.current = result.room.game.revision; signatureRef.current = JSON.stringify({ positions: result.room.game.positions, turn: result.room.game.turn, dice: result.room.game.dice, winner: result.room.game.winner }); setPositions(result.room.game.positions.map(row => [...row])); setTurn(result.room.game.turn); setDice(result.room.game.dice); setWinner(result.room.game.winner); setRoomMessage("Room बन गया। Code अपने दोस्तों को भेजें।"); } catch (error) { setRoomMessage(error instanceof Error ? error.message : "Room create नहीं हुआ। API server URL check करें।"); } finally { setRoomBusy(false); } }}>{roomBusy ? "Please wait…" : "Create room"}</button>{roomCode && <><strong className="room-code">{roomCode}</strong><button className="secondary-btn" onClick={() => { void navigator.clipboard?.writeText(roomCode).then(() => setRoomMessage("Room code copied. Friends को भेजें।")).catch(() => setRoomMessage("Room code manually copy करें: "+roomCode)); }}>Copy code</button></>}</div>
       <div className="room-actions"><input aria-label="Enter room code" placeholder="Enter room code" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 8))}/><button className="secondary-btn" disabled={roomBusy || !joinCode.trim() || !displayName.trim()} onClick={async () => { setRoomBusy(true); try { const result = await api.joinLudoRoom(joinCode.trim(), displayName.trim()); setRoom(result.room); setRoomCode(result.room.code); revisionRef.current = result.room.game.revision; signatureRef.current = JSON.stringify({ positions: result.room.game.positions, turn: result.room.game.turn, dice: result.room.game.dice, winner: result.room.game.winner }); setPositions(result.room.game.positions.map(row => [...row])); setTurn(result.room.game.turn); setDice(result.room.game.dice); setWinner(result.room.game.winner); setRoomMessage(`Room join हो गया: ${result.room.players.length}/4 players`); } catch (error) { setRoomMessage(error instanceof Error ? error.message : "Room join नहीं हुआ। API server URL check करें।"); } finally { setRoomBusy(false); } }}>Join room</button></div>
-      {room && <div className="room-members"><b>Room {room.code} · {room.players.length}/4</b>{room.players.map(player => <span key={player.playerId}>{player.displayName} · {player.color}</span>)}<button className="secondary-btn" onClick={() => { setRoom(null); setRoomCode(""); setJoinCode(""); setRoomMessage("Room से बाहर आ गए।"); resetGame(); }}>Leave room</button></div>}
+      {room && <div className="room-members"><b>Room {room.code} · {room.players.length}/4</b>{room.players.map(player => <span key={player.playerId}>{player.displayName} · {player.color}</span>)}<button className="secondary-btn" onClick={() => { setRoom(null); setRoomCode(""); localStorage.removeItem("ludo-plus-last-room"); setJoinCode(""); setRoomMessage("Room से बाहर आ गए।"); resetGame(); }}>Leave room</button></div>}
       <p className="muted small">{roomMessage}</p>
     </section>
   </section>;
