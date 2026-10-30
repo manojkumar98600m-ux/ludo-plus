@@ -151,6 +151,21 @@ function validMoveTransition(room: Room, positions: number[][], turn: number, di
   return turn === expectedTurn;
 }
 
+app.post("/api/ludo/rooms/:roomCode/roll", async (req, res) => {
+  try {
+    const code = String(req.params.roomCode || "").trim().toUpperCase();
+    const room = await loadRoom(code);
+    if (!room) return res.status(404).json({ error: "Room not found." });
+    const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";
+    if (!room.players[room.game.turn] || room.players[room.game.turn].playerId !== playerId) return res.status(403).json({ error: "It is not your turn." });
+    if (room.game.winner !== null || room.game.dice !== null) return res.status(409).json({ error: "Dice is already rolled or game is over.", room: publicRoom(room) });
+    room.game = { ...room.game, dice: randomInt(1, 7), revision: room.game.revision + 1, updatedAt: Date.now() };
+    room.status = "playing";
+    await saveRoom(room);
+    return res.json({ room: publicRoom(room) });
+  } catch { return res.status(503).json({ error: "Dice roll failed. Check server/database connection." }); }
+});
+
 app.put("/api/ludo/rooms/:roomCode/state", async (req, res) => {
   try { const room = await loadRoom(String(req.params.roomCode || "").trim().toUpperCase());
     if (!room) return res.status(404).json({ error: "Room not found." });
