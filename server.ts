@@ -226,8 +226,50 @@ app.post("/api/posts", async (req, res) => {
     return res.status(201).json({ post });
   } catch { return res.status(503).json({ error: "Post could not be saved. Check Supabase configuration." }); }
 });
-app.post("/api/posts/:postId/like", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const post = feedPosts.find(p => p.id === req.params.postId); if (!post || !playerId) return res.status(!post ? 404 : 400).json({ error: !post ? "Post not found." : "Player ID required." }); post.likes = post.likes.includes(playerId) ? post.likes.filter(id => id !== playerId) : [...post.likes, playerId]; return res.json({ post }); });
-app.post("/api/posts/:postId/comments", (req, res) => { const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : ""; const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : ""; const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0,300) : ""; const post = feedPosts.find(p => p.id === req.params.postId); if (!post || !playerId || !displayName || !text) return res.status(!post ? 404 : 400).json({ error: !post ? "Post not found." : "Name and comment required." }); post.comments.push({ id: randomBytes(12).toString("hex"), playerId, displayName, text, createdAt: Date.now() }); if (post.comments.length > 100) post.comments.shift(); return res.status(201).json({ post }); });
+app.post("/api/posts/:postId/like", async (req, res) => {
+  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : "";
+  if (!playerId) return res.status(400).json({ error: "Player ID required." });
+  try {
+    if (dbReady()) {
+      const rows = await dbRequest("feed_posts", `?id=eq.${encodeURIComponent(req.params.postId)}&select=*`) as any[];
+      const row = rows[0];
+      if (!row) return res.status(404).json({ error: "Post not found." });
+      const likes: string[] = Array.isArray(row.likes) ? row.likes : [];
+      const updated = likes.includes(playerId) ? likes.filter(id => id !== playerId) : [...likes, playerId];
+      const saved = await dbRequest("feed_posts", `?id=eq.${encodeURIComponent(req.params.postId)}&select=*`, "PATCH", { likes: updated }) as any[];
+      const r = saved[0] || { ...row, likes: updated };
+      return res.json({ post: { id:r.id, playerId:r.player_id, displayName:r.display_name, caption:r.caption || "", imageUrl:r.image_url || "", createdAt:Number(r.created_at), likes:Array.isArray(r.likes)?r.likes:updated, comments:Array.isArray(r.comments)?r.comments:[] } });
+    }
+    const post = feedPosts.find(p => p.id === req.params.postId);
+    if (!post) return res.status(404).json({ error: "Post not found." });
+    post.likes = post.likes.includes(playerId) ? post.likes.filter(id => id !== playerId) : [...post.likes, playerId];
+    return res.json({ post });
+  } catch { return res.status(503).json({ error: "Post like could not be saved." }); }
+});
+app.post("/api/posts/:postId/comments", async (req, res) => {
+  const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.slice(0,64) : "";
+  const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim().slice(0,24) : "";
+  const text = typeof req.body?.text === "string" ? req.body.text.trim().slice(0,300) : "";
+  if (!playerId || !displayName || !text) return res.status(400).json({ error: "Name and comment required." });
+  const comment = { id: randomBytes(12).toString("hex"), playerId, displayName, text, createdAt: Date.now() };
+  try {
+    if (dbReady()) {
+      const rows = await dbRequest("feed_posts", `?id=eq.${encodeURIComponent(req.params.postId)}&select=*`) as any[];
+      const row = rows[0];
+      if (!row) return res.status(404).json({ error: "Post not found." });
+      const comments = Array.isArray(row.comments) ? row.comments : [];
+      const updated = [...comments, comment].slice(-100);
+      const saved = await dbRequest("feed_posts", `?id=eq.${encodeURIComponent(req.params.postId)}&select=*`, "PATCH", { comments: updated }) as any[];
+      const r = saved[0] || { ...row, comments: updated };
+      return res.status(201).json({ post: { id:r.id, playerId:r.player_id, displayName:r.display_name, caption:r.caption || "", imageUrl:r.image_url || "", createdAt:Number(r.created_at), likes:Array.isArray(r.likes)?r.likes:[], comments:Array.isArray(r.comments)?r.comments:updated } });
+    }
+    const post = feedPosts.find(p => p.id === req.params.postId);
+    if (!post) return res.status(404).json({ error: "Post not found." });
+    post.comments.push(comment);
+    if (post.comments.length > 100) post.comments.shift();
+    return res.status(201).json({ post });
+  } catch { return res.status(503).json({ error: "Comment could not be saved." }); }
+});
 app.get("/api/reels", async (_req, res) => {
   try {
     if (dbReady()) {
@@ -252,12 +294,25 @@ app.post("/api/reels", async (req, res) => {
     return res.status(201).json({ reel });
   } catch { return res.status(503).json({ error: "Reel could not be saved. Check Supabase configuration." }); }
 });
-app.post("/api/reels/:reelId/like", (req, res) => {
+app.post("/api/reels/:reelId/like", async (req, res) => {
   const playerId = typeof req.body?.playerId === "string" ? req.body.playerId.trim().slice(0,64) : "";
-  const reel = reels.find(item => item.id === req.params.reelId);
-  if (!reel || !playerId) return res.status(!reel ? 404 : 400).json({ error: !reel ? "Reel not found." : "Player ID required." });
-  reel.likes = reel.likes.includes(playerId) ? reel.likes.filter(id => id !== playerId) : [...reel.likes, playerId];
-  return res.json({ reel });
+  if (!playerId) return res.status(400).json({ error: "Player ID required." });
+  try {
+    if (dbReady()) {
+      const rows = await dbRequest("reels", `?id=eq.${encodeURIComponent(req.params.reelId)}&select=*`) as any[];
+      const row = rows[0];
+      if (!row) return res.status(404).json({ error: "Reel not found." });
+      const likes: string[] = Array.isArray(row.likes) ? row.likes : [];
+      const updated = likes.includes(playerId) ? likes.filter(id => id !== playerId) : [...likes, playerId];
+      const saved = await dbRequest("reels", `?id=eq.${encodeURIComponent(req.params.reelId)}&select=*`, "PATCH", { likes: updated }) as any[];
+      const r = saved[0] || { ...row, likes: updated };
+      return res.json({ reel: { id:r.id, playerId:r.player_id, displayName:r.display_name, caption:r.caption || "", videoUrl:r.video_url, createdAt:Number(r.created_at), likes:Array.isArray(r.likes)?r.likes:updated } });
+    }
+    const reel = reels.find(item => item.id === req.params.reelId);
+    if (!reel) return res.status(404).json({ error: "Reel not found." });
+    reel.likes = reel.likes.includes(playerId) ? reel.likes.filter(id => id !== playerId) : [...reel.likes, playerId];
+    return res.json({ reel });
+  } catch { return res.status(503).json({ error: "Reel like could not be saved." }); }
 });
 
 app.listen(port, "0.0.0.0", () => console.log(`LUDO PLUS API listening on ${port}`));
