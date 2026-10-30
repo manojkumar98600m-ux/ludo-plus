@@ -236,6 +236,7 @@ app.put("/api/ludo/rooms/:roomCode/state", async (req, res) => {
     if (!room) return res.status(404).json({ error: "Room not found." });
     const playerId = typeof req.body?.playerId === "string" ? req.body.playerId : "";
     if (!room.players.some(p => p.playerId === playerId)) return res.status(403).json({ error: "You are not a member of this room." });
+    if (room.status !== "playing") return res.status(409).json({ error: "Host must start the game after everyone is ready." });
     const activePlayer = room.players[room.game.turn];
     if (!activePlayer || activePlayer.playerId !== playerId) return res.status(403).json({ error: "It is not your turn." });
     const positions = req.body?.positions, turn = req.body?.turn, dice = req.body?.dice, winner = req.body?.winner;
