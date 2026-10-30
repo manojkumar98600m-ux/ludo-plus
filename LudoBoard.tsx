@@ -159,8 +159,8 @@ export default function LudoBoard() {
     for (let p = 0; p < 4; p++) {
       const laneIndex = LANES[p].findIndex(([lr, lc]) => lr === r && lc === c);
       if (laneIndex >= 0) {
-        const count = positions[p].filter(pos => pos === 51 + laneIndex).length;
-        return { cls: `lane-cell ${players[p].css}`, label: count ? "●" : "", tokens: [] as string[] };
+        const tokens = positions[p].map((pos, ti) => pos === 51 + laneIndex ? players[p].css + (ti + 1) : "").filter(Boolean);
+        return { cls: `lane-cell ${players[p].css}`, label: "", tokens };
       }
     }
     const owner = baseOwner(r, c);
@@ -169,10 +169,12 @@ export default function LudoBoard() {
       const localC = c < 6 ? c : c > 8 ? c - 9 : c;
       const inHomeBase = localR >= 1 && localR <= 4 && localC >= 1 && localC <= 4;
       const tokenSpot = (localR === 1 || localR === 4) && (localC === 1 || localC === 4);
+      const spotIndex = localR === 1 ? (localC === 1 ? 0 : 1) : (localC === 1 ? 2 : 3);
+      const tokens = tokenSpot && positions[owner][spotIndex] === -1 ? [players[owner].css + (spotIndex + 1)] : [];
       return {
         cls: `yard-cell ${players[owner].css}${inHomeBase ? " yard-base" : ""}`,
-        label: tokenSpot ? "●" : "",
-        tokens: [] as string[]
+        label: "",
+        tokens
       };
     }
     if (r >= 6 && r <= 8 && c >= 6 && c <= 8) return { cls: "finish-cell", label: (r === 7 && c === 7) ? "✦" : "", tokens: [] as string[] };
