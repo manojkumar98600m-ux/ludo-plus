@@ -7,17 +7,18 @@ export default function ChatView() {
   const [name, setName] = useState(() => localStorage.getItem("ludo-plus-chat-name") || "Player");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [lastMessageAt, setLastMessageAt] = useState(0);
   useEffect(() => {
     let active = true;
-    const refresh = async () => { try { const result = await api.getChatMessages(); if (active) { setMessages(result.messages); setError(""); } } catch { if (active) setError("Chat server connect नहीं हुआ।"); } };
+    const refresh = async () => { try { const result = await api.getChatMessages(lastMessageAt); if (active && result.messages.length) { setMessages(old => [...old, ...result.messages].filter((m, i, all) => all.findIndex(x => x.id === m.id) === i).slice(-100)); setLastMessageAt(Math.max(lastMessageAt, ...result.messages.map(m => m.createdAt))); setError(""); } } catch { if (active) setError("Chat server connect नहीं हुआ।"); } };
     void refresh(); const timer = window.setInterval(refresh, 2500);
     return () => { active = false; window.clearInterval(timer); };
-  }, []);
+  }, [lastMessageAt]);
   async function send() {
     const text = draft.trim(), displayName = name.trim().slice(0,24);
     if (!text || !displayName || sending) return;
     setSending(true); setError(""); localStorage.setItem("ludo-plus-chat-name", displayName);
-    try { const result = await api.sendChatMessage(displayName, text); setMessages(old => [...old.filter(m => m.id !== result.message.id), result.message].slice(-100)); setDraft(""); }
+    try { const result = await api.sendChatMessage(displayName, text); setMessages(old => [...old.filter(m => m.id !== result.message.id), result.message].slice(-100)); setLastMessageAt(old => Math.max(old, result.message.createdAt)); setDraft(""); }
     catch (e) { setError(e instanceof Error ? e.message : "Message भेजा नहीं जा सका।"); }
     finally { setSending(false); }
   }
