@@ -187,7 +187,12 @@ export default function LudoBoard() {
       {Array.from({ length: 15 }, (_, r) => Array.from({ length: 15 }, (_, c) => {
         const cell = cellContent(r, c);
         return <div key={`${r}-${c}`} className={`ludo-cell ${cell.cls}`} title={cell.label}>
-          {cell.tokens.length > 0 ? <span className="board-pieces">{cell.tokens.map((token, i) => <i key={`${token}-${i}`} className={`board-piece ${token.slice(0, -1)}`} aria-label={token} />)}</span> : cell.label}
+          {cell.tokens.length > 0 ? <span className="board-pieces">{cell.tokens.map((token, i) => {
+            const playerIndex = players.findIndex(player => token.startsWith(player.css));
+            const tokenIndex = Number(token.slice(-1)) - 1;
+            const canSelect = playerIndex === turn && dice !== null && winner === null;
+            return <button type="button" key={`${token}-${i}`} className={`board-piece ${token.slice(0, -1)}${canSelect ? " board-piece-selectable" : ""}`} aria-label={`Select ${token} token`} title={canSelect ? "गोटी चलाने के लिए टैप करें" : token} onClick={() => { if (canSelect) moveToken(tokenIndex); }} disabled={!canSelect || (positions[playerIndex]?.[tokenIndex] === -1 && dice !== 6) || (positions[playerIndex]?.[tokenIndex] >= 0 && positions[playerIndex]?.[tokenIndex] + (dice ?? 0) > 57)} />
+          })}</span> : cell.label}
         </div>;
       }))}
     </div>
