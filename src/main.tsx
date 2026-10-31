@@ -23,8 +23,8 @@ function App() {
     { id: "profile", label: "Profile", icon: "♙" }
   ];
   return <div className="app ludo-plus-app">
-    <header className="app-header">
-      <div className="brand-mark"><span className="brand-crown">👑</span><span>LUDO <b>PLUS</b></span></div>
+    <header className="app-header screenshot-header">
+      <button className="header-menu" aria-label="Menu" onClick={() => setTab("profile")}>☰</button><div className="brand-mark"><span className="brand-crown">👑</span><span>LUDO <b>PLUS</b></span></div>
       <p>Play · Chat · Connect</p>
       <button className="header-bell" aria-label="Notifications" onClick={() => setTab("chat")}>♧</button>
     </header>
