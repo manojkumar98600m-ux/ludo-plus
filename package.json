@@ -17,7 +17,9 @@
     "react-dom": "latest",
     "lucide-react": "latest",
     "express": "latest",
-    "cors": "latest"
+    "cors": "latest",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/android": "^7.4.3"
   },
   "devDependencies": {
     "tsx": "latest",
@@ -25,6 +27,7 @@
     "@types/react-dom": "latest",
     "@types/express": "latest",
     "@types/cors": "latest",
-    "@types/node": "latest"
+    "@types/node": "latest",
+    "@capacitor/cli": "^7.4.3"
   }
 }
