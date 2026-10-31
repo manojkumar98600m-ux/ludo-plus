@@ -5,7 +5,7 @@ on:
   push:
     paths:
       - "package.json"
-      - "capacitor.config.ts"
+      - "capacitor.config.json"
       - ".github/workflows/build-android.yml"
       - "**.tsx"
       - "**.ts"
