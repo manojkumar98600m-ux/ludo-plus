@@ -1,0 +1,8 @@
+{
+  "appId": "com.ludoplus.app",
+  "appName": "LUDO PLUS",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}
