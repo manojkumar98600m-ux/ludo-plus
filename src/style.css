@@ -75,3 +75,27 @@ main{max-width:620px}
 .hero{border-color:#7541ac;background:linear-gradient(135deg,#32106f,#170a39)}
 .membership{border-color:#7044aa;background:linear-gradient(110deg,#36166c,#170b39)}
 @media(max-width:380px){.app{padding:10px 8px}.reference-hero{min-height:245px;padding:16px 12px}.hero-copy{width:72%}.hero-copy h1{font-size:24px}.hero-art{right:-20px;width:45%}.art-orbit{width:88px;height:88px;font-size:17px}.art-dice{font-size:35px}.art-crown{font-size:29px}.shortcut-grid{gap:5px}.shortcut-grid button{min-height:90px}.shortcut-grid b{font-size:9px}}
+
+
+/* New screenshot-matched home: story circles, gaming shortcuts and persistent mobile navigation */
+.ludo-plus-app{padding-bottom:94px}
+.brand-mark{gap:7px}.brand-crown{font-size:30px;filter:drop-shadow(0 2px 4px #ffcc3a55)}
+.story-strip{display:flex;gap:13px;overflow-x:auto;padding:3px 1px 13px;margin:0 0 13px;scrollbar-width:none}
+.story-strip::-webkit-scrollbar{display:none}
+.story-strip button{display:flex;flex:0 0 64px;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:transparent;color:#fff}
+.story-strip button b{font-size:10px;font-weight:700;white-space:nowrap}
+.story-ring{display:grid;place-items:center;width:61px;height:61px;border-radius:50%;border:3px solid #e94bdf;background:linear-gradient(145deg,#442080,#170a4c);box-shadow:inset 0 0 0 2px #f6d35e;font-size:25px}
+.story-ring.add-story{background:linear-gradient(145deg,#2b80ff,#5b20d0);font-size:34px;color:white}
+.shortcut-heading span{cursor:pointer}
+.feed-heading{display:flex;align-items:center;justify-content:space-between;margin:17px 2px 8px}
+.feed-heading h2{font-size:17px;margin:0}.feed-heading span{font-size:11px;color:#d4baff}
+.ludo-plus-app .feed-list{margin-top:8px}
+.ludo-plus-app .feed-post{padding:11px;border-color:#5c348b;background:#180d38;border-radius:16px}
+.ludo-plus-app .feed-image{max-height:460px}
+.profile-page{padding:18px 13px;border:1px solid #6b3c9f;border-radius:20px;background:linear-gradient(145deg,#241047,#100724)}
+.profile-page h2{margin-top:0}.profile-page>p{color:#c8b7e5;font-size:13px}
+.profile-dating{display:block;width:100%;margin-top:10px;padding:12px;border:1px solid #8957c5;border-radius:12px;background:linear-gradient(110deg,#6e2cd2,#c12c9e);color:white;font-weight:800}
+.bottom-app-nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(100%,620px);z-index:20;margin:0;padding:8px 7px max(8px,env(safe-area-inset-bottom));border-radius:18px 18px 0 0;border:1px solid #7545b5;border-bottom:0;background:#16083ff5;box-shadow:0 -8px 28px #05001488;backdrop-filter:blur(16px)}
+.bottom-app-nav .tab{padding:7px 1px;font-size:10px}
+.bottom-app-nav .tab span{font-size:22px}
+@media(max-width:380px){.story-strip{gap:9px}.story-strip button{flex-basis:58px}.story-ring{width:55px;height:55px}.reference-hero{min-height:250px}.hero-copy{width:73%}.hero-art{width:43%}}
