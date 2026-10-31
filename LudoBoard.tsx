@@ -232,7 +232,25 @@ export default function LudoBoard() {
   }
 
   return <section className="panel">
-    <div className="section-head"><div><span className="eyebrow">GAME ZONE</span><h2>Ludo Arena</h2></div><span className="tag">15 × 15 board</span></div>
+    <div className="section-head"><div><span className="eyebrow">GAME ZONE</span><h2>Ludo Arena</h2></div><span className="tag">LUDO PLUS</span></div>
+    <div className="ludo-feature-hero">
+      <span className="ludo-feature-kicker">♛ THE ROYAL GAME</span>
+      <h2>Roll the Dice. Rule the Game.</h2>
+      <p>Play your way — solo, with friends, or in the online arena.</p>
+      <div className="ludo-feature-actions">
+        <button className="ludo-feature-primary" onClick={() => { document.getElementById("ludo-board-area")?.scrollIntoView({ behavior: "smooth", block: "start" }); setMessage("Local Ludo: पासा फेंककर खेल शुरू करें।"); }}>🎲 Play Ludo</button>
+        <button className="ludo-feature-secondary" onClick={() => document.getElementById("ludo-private-room")?.scrollIntoView({ behavior: "smooth", block: "center" })}>👥 Play with Friends</button>
+      </div>
+    </div>
+    <div className="ludo-feature-grid">
+      <article className="ludo-feature-card"><span>🤖</span><div><b>Play with Computer</b><small>Practice mode · coming next</small></div></article>
+      <article className="ludo-feature-card"><span>👥</span><div><b>Local Multiplayer</b><small>Pass & play · 2–4 players</small></div></article>
+      <article className="ludo-feature-card"><span>🌐</span><div><b>Online Multiplayer</b><small>Private room code available</small></div></article>
+      <article className="ludo-feature-card"><span>🎙️</span><div><b>Voice Chat</b><small>Coming soon</small></div></article>
+      <article className="ludo-feature-card"><span>⚡</span><div><b>Quick Mode</b><small>Coming soon</small></div></article>
+      <article className="ludo-feature-card"><span>🏆</span><div><b>Tournaments</b><small>Coming soon</small></div></article>
+    </div>
+    <div id="ludo-board-area" className="ludo-board-title"><h3>🎲 Classic Ludo Board</h3><span>4 colours · 4 tokens each</span></div>
     <div className="ludo15" role="img" aria-label="15 by 15 Ludo board">
       {Array.from({ length: 15 }, (_, r) => Array.from({ length: 15 }, (_, c) => {
         const cell = cellContent(r, c);
@@ -253,7 +271,7 @@ export default function LudoBoard() {
     <div className="dice-row"><button className="primary-btn" onClick={rollDice} disabled={dice !== null || winner !== null}>Roll dice</button><strong className="dice">{dice ?? "—"}</strong><button className="secondary-btn" onClick={resetGame}>New game</button></div>
     {winner !== null && <p className="winner-banner">🏆 {players[winner].name} wins!</p>}
     <p className="muted small">Private room में game state polling से sync होता है; API server दोनों फोन के लिए उपलब्ध होना चाहिए।</p>
-    <section className="private-room">
+    <section id="ludo-private-room" className="private-room">
       <h3>🔐 Private Ludo Room</h3>
       <p className="muted small">Room code से जुड़ें; game state लगभग हर 2 सेकंड में sync होगा।</p>
       <div className="room-actions"><input aria-label="Your player name" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value.slice(0,24))}/><button className="secondary-btn" disabled={roomBusy || !displayName.trim()} onClick={async () => { setRoomBusy(true); try { const result = await api.createLudoRoom(displayName.trim()); setRoom(result.room); setRoomCode(result.room.code); localStorage.setItem("ludo-plus-last-room", result.room.code); revisionRef.current = result.room.game.revision; signatureRef.current = JSON.stringify({ positions: result.room.game.positions, turn: result.room.game.turn, dice: result.room.game.dice, winner: result.room.game.winner }); setPositions(result.room.game.positions.map(row => [...row])); setTurn(result.room.game.turn); setDice(result.room.game.dice); setWinner(result.room.game.winner); setRoomMessage("Room बन गया। Code अपने दोस्तों को भेजें।"); } catch (error) { setRoomMessage(error instanceof Error ? error.message : "Room create नहीं हुआ। API server URL check करें।"); } finally { setRoomBusy(false); } }}>{roomBusy ? "Please wait…" : "Create room"}</button>{roomCode && <><strong className="room-code">{roomCode}</strong><button className="secondary-btn" onClick={() => { void navigator.clipboard?.writeText(roomCode).then(() => setRoomMessage("Room code copied. Friends को भेजें।")).catch(() => setRoomMessage("Room code manually copy करें: "+roomCode)); }}>Copy code</button><button className="secondary-btn" onClick={async () => { const invite = `Join my LUDO PLUS game! Room code: ${roomCode}`; try { if (navigator.share) await navigator.share({ title: "LUDO PLUS room invite", text: invite, url: `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomCode)}` }); else { await navigator.clipboard.writeText(invite); setRoomMessage("Invite copied. Friends को भेजें।"); } } catch { try { await navigator.clipboard.writeText(invite); setRoomMessage("Invite copied. Friends को भेजें।"); } catch { setRoomMessage(invite); } } }}>Share invite</button></>}</div>
