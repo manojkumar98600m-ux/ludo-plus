@@ -38,7 +38,6 @@ export default function LudoBoard() {
   const [dice, setDice] = useState<number | null>(null);
   const [message, setMessage] = useState("Red की बारी है — पासा फेंकें");
   const [winner, setWinner] = useState<number | null>(null);
-  const [playerCount, setPlayerCount] = useState(4);
   const [roomCode, setRoomCode] = useState("");
   const [joinCode, setJoinCode] = useState("");
   useEffect(() => { const invitedCode = new URLSearchParams(window.location.search).get("room"); if (invitedCode) setJoinCode(invitedCode.toUpperCase().slice(0, 8)); }, []);
@@ -152,7 +151,7 @@ export default function LudoBoard() {
     setMessage(movable ? `${players[turn].name}: गोटी चुनें` : `${players[turn].name} को चाल नहीं मिली`);
     if (!movable) window.setTimeout(() => {
       setDice(null);
-      const nextTurn = room ? (turn + 1) % room.players.length : (turn + 1) % playerCount;
+      const nextTurn = room ? (turn + 1) % room.players.length : (turn + 1) % players.length;
       setTurn(nextTurn);
       setMessage(`${players[nextTurn].name} की बारी है`);
     }, 650);
@@ -178,7 +177,7 @@ export default function LudoBoard() {
       setWinner(turn); setMessage(`${players[turn].name} जीत गया! 🎉`);
     } else if (dice === 6) setMessage(`${players[turn].name} को 6 मिला — फिर से पासा फेंकें`);
     else {
-      const nextTurn = room ? (turn + 1) % room.players.length : (turn + 1) % playerCount;
+      const nextTurn = room ? (turn + 1) % room.players.length : (turn + 1) % 4;
       setTurn(nextTurn); setMessage(`${players[nextTurn].name} की बारी है`);
     }
     setDice(null);
@@ -244,15 +243,14 @@ export default function LudoBoard() {
       </div>
     </div>
     <div className="ludo-feature-grid">
-      <article className="ludo-feature-card"><span>🤖</span><div><b>Play with Computer</b><small>Computer practice mode is being prepared</small></div></article>
-      <article className="ludo-feature-card"><span>👥</span><div><b>Local Multiplayer</b><small>Choose 2–4 players below</small></div></article>
+      <article className="ludo-feature-card"><span>🤖</span><div><b>Play with Computer</b><small>Practice mode · coming next</small></div></article>
+      <article className="ludo-feature-card"><span>👥</span><div><b>Local Multiplayer</b><small>Pass & play · 2–4 players</small></div></article>
       <article className="ludo-feature-card"><span>🌐</span><div><b>Online Multiplayer</b><small>Private room code available</small></div></article>
       <article className="ludo-feature-card"><span>🎙️</span><div><b>Voice Chat</b><small>Coming soon</small></div></article>
       <article className="ludo-feature-card"><span>⚡</span><div><b>Quick Mode</b><small>Coming soon</small></div></article>
       <article className="ludo-feature-card"><span>🏆</span><div><b>Tournaments</b><small>Coming soon</small></div></article>
     </div>
-    <div id="ludo-board-area" className="ludo-board-title"><h3>🎲 Classic Ludo Board</h3><span>{room ? `${room.players.length} online players` : `${playerCount} local players`} · 4 tokens each</span></div>
-    {!room && <div className="player-count-picker" aria-label="Choose local player count"><b>Players</b>{[2,3,4].map(count => <button key={count} type="button" className={playerCount === count ? "selected" : ""} onClick={() => { setPlayerCount(count); resetGame(); setMessage(`${players[0].name} की बारी है — ${count} players`); }}>{count} Players</button>}</div>}
+    <div id="ludo-board-area" className="ludo-board-title"><h3>🎲 Classic Ludo Board</h3><span>4 colours · 4 tokens each</span></div>
     <div className="ludo15" role="img" aria-label="15 by 15 Ludo board">
       {Array.from({ length: 15 }, (_, r) => Array.from({ length: 15 }, (_, c) => {
         const cell = cellContent(r, c);
@@ -267,7 +265,7 @@ export default function LudoBoard() {
       }))}
     </div>
     <div className="token-chooser">
-      {players.slice(0, room ? room.players.length : playerCount).map((player, pi) => <div className={`token-player ${player.css}`} key={player.name}><b>{player.name}</b><div className="token-grid">{positions[pi].map((pos, i) => <button key={i} className={`token ${player.css}-token`} aria-label={`${player.name} token ${i + 1}`} onClick={() => { if (turn === pi) moveToken(i); }} disabled={turn !== pi || dice === null || (pos === -1 && dice !== 6) || (pos >= 0 && pos + dice > 57)}>{pos < 0 ? "●" : pos === 57 ? "★" : pos + 1}</button>)}</div><small>{positions[pi].filter(pos => pos === 57).length}/4 home</small></div>)}
+      {players.map((player, pi) => <div className={`token-player ${player.css}`} key={player.name}><b>{player.name}</b><div className="token-grid">{positions[pi].map((pos, i) => <button key={i} className={`token ${player.css}-token`} aria-label={`${player.name} token ${i + 1}`} onClick={() => { if (turn === pi) moveToken(i); }} disabled={turn !== pi || dice === null || (pos === -1 && dice !== 6) || (pos >= 0 && pos + dice > 57)}>{pos < 0 ? "●" : pos === 57 ? "★" : pos + 1}</button>)}</div><small>{positions[pi].filter(pos => pos === 57).length}/4 home</small></div>)}
     </div>
     <div className="game-status"><strong>{message}</strong><span>Current player: <b>{players[turn].name}</b></span></div>
     <div className="dice-row"><button className="primary-btn" onClick={rollDice} disabled={dice !== null || winner !== null}>Roll dice</button><strong className="dice">{dice ?? "—"}</strong><button className="secondary-btn" onClick={resetGame}>New game</button></div>
