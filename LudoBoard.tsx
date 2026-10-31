@@ -38,6 +38,7 @@ export default function LudoBoard() {
   const [dice, setDice] = useState<number | null>(null);
   const [message, setMessage] = useState("Red की बारी है — पासा फेंकें");
   const [winner, setWinner] = useState<number | null>(null);
+  const [playerCount, setPlayerCount] = useState(4);
   const [roomCode, setRoomCode] = useState("");
   const [joinCode, setJoinCode] = useState("");
   useEffect(() => { const invitedCode = new URLSearchParams(window.location.search).get("room"); if (invitedCode) setJoinCode(invitedCode.toUpperCase().slice(0, 8)); }, []);
@@ -151,7 +152,7 @@ export default function LudoBoard() {
     setMessage(movable ? `${players[turn].name}: गोटी चुनें` : `${players[turn].name} को चाल नहीं मिली`);
     if (!movable) window.setTimeout(() => {
       setDice(null);
-      const nextTurn = room ? (turn + 1) % room.players.length : (turn + 1) % players.length;
+      const nextTurn = room ? (turn + 1) % room.players.length : (turn + 1) % playerCount;
       setTurn(nextTurn);
       setMessage(`${players[nextTurn].name} की बारी है`);
     }, 650);
@@ -177,7 +178,7 @@ export default function LudoBoard() {
       setWinner(turn); setMessage(`${players[turn].name} जीत गया! 🎉`);
     } else if (dice === 6) setMessage(`${players[turn].name} को 6 मिला — फिर से पासा फेंकें`);
     else {
-      const nextTurn = room ? (turn + 1) % room.players.length : (turn + 1) % 4;
+      const nextTurn = room ? (turn + 1) % room.players.length : (turn + 1) % playerCount;
       setTurn(nextTurn); setMessage(`${players[nextTurn].name} की बारी है`);
     }
     setDice(null);
@@ -250,7 +251,8 @@ export default function LudoBoard() {
       <article className="ludo-feature-card"><span>⚡</span><div><b>Quick Mode</b><small>Coming soon</small></div></article>
       <article className="ludo-feature-card"><span>🏆</span><div><b>Tournaments</b><small>Coming soon</small></div></article>
     </div>
-    <div id="ludo-board-area" className="ludo-board-title"><h3>🎲 Classic Ludo Board</h3><span>4 colours · 4 tokens each</span></div>
+    <div id="ludo-board-area" className="ludo-board-title"><h3>🎲 Classic Ludo Board</h3><span>{room ? `${room.players.length} online players` : `${playerCount} local players`} · 4 tokens each</span></div>
+    {!room && <label className="player-count-picker">Players: <select value={playerCount} onChange={e => { setPlayerCount(Number(e.target.value)); resetGame(); }}><option value={2}>2 players</option><option value={3}>3 players</option><option value={4}>4 players</option></select></label> }
     <div className="ludo15" role="img" aria-label="15 by 15 Ludo board">
       {Array.from({ length: 15 }, (_, r) => Array.from({ length: 15 }, (_, c) => {
         const cell = cellContent(r, c);
