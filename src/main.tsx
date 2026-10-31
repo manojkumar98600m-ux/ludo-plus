@@ -41,7 +41,7 @@ function App() {
             <span>{item.icon}</span>{item.label}
           </button>)}
         </nav>
-        {tab === "game" && <><LudoBoard /><section className="notice"><b>Online play coming after server setup</b><p>Dice demo abhi isi device par chalta hai. Live rooms, friends ke saath turns aur room codes abhi connected nahi hain.</p></section></>}
+        {tab === "game" && <><LudoBoard /><section className="notice"><b>Private rooms · Invite your friends</b><p>Create a room below, share its code, and play with up to 3 friends. Room updates sync through the API. For rooms to survive server restarts, configure the Supabase <code>ludo_rooms</code> table.</p></section></>}
         {tab === "dating" && <DatingView />}
         {tab === "reels" && <ReelsView />}
         {tab === "chat" && <ChatView />}
